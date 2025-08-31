@@ -101,3 +101,22 @@ def gen_x_y_for_word(word: str) -> tuple[NDArray[np.float32], NDArray[np.float32
         x.append(x_row)
         y.append(y_row)
     return np.array(x, dtype=np.float32), np.array(y, dtype=np.float32)
+
+
+def gen_row(word: str) -> NDArray[np.float32]:
+    """
+    returns a 1 X 34 array
+    """
+
+    x_row = [0 for _ in range(34)]
+    for i in range(min(len(word), 17)):
+        if word[i] != "_":
+            x_row[i] = ord(word[i]) - ord("a") + 1
+        else:
+            x_row[i] = -1
+
+        if word[-1 - i] != "_":
+            x_row[33 - i] = ord(word[-1 - i]) - ord("a") + 1
+        else:
+            x_row[33 - i] = -1
+    return np.array(x_row, dtype=np.float32).reshape(1, -1)

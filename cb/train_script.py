@@ -27,7 +27,7 @@ def main():
     model_path = "models/cb.pth"
     print(f"Training model... (saving to {model_path})")
 
-    train(X, Y, model_path)
+    train(X, Y, model_path, verbose=True)
 
     print("Training complete!")
     print(f"Model saved to: {model_path}")
@@ -36,4 +36,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

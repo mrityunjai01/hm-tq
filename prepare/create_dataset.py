@@ -1,4 +1,5 @@
 import os
+from numpy.typing import NDArray
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -75,7 +76,7 @@ def create_dataset(
     print(f"Y shape: {Y.shape} -> {y_path}")
 
 
-def load_dataset(data_dir: str = "data") -> tuple[np.ndarray, np.ndarray]:
+def load_dataset(data_dir: str = "data") -> tuple[NDArray[np.int32], NDArray[np.int32]]:
     """
     Load the dataset from parquet files.
 
@@ -94,8 +95,8 @@ def load_dataset(data_dir: str = "data") -> tuple[np.ndarray, np.ndarray]:
     x_df = pd.read_parquet(x_path)
     y_df = pd.read_parquet(y_path)
 
-    X = x_df.values.astype(np.float32)
-    Y = y_df.values.astype(np.float32)
+    X = x_df.values.astype(np.int32)
+    Y = y_df.values.astype(np.int32)
 
     print(f"Loaded dataset: X shape {X.shape}, Y shape {Y.shape}")
 
@@ -107,6 +108,7 @@ if __name__ == "__main__":
     create_dataset(
         words_file="w_train.txt",
         output_dir="data",
+        max_words=30_000,
     )
 
     # Example of loading the dataset

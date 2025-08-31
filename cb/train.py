@@ -13,10 +13,11 @@ def train(
 ) -> None:
     cb = MultiOutputClassifier(
         CatBoostClassifier(
-            iterations=500,
+            iterations=20,
             learning_rate=0.1,
             depth=8,
             random_seed=42,
+            cat_features=list(range(26)),
             **kwargs,
         )
     )
