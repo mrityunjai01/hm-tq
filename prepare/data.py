@@ -70,7 +70,7 @@ def sort_key(ch: str) -> int:
     return char_freq.index(ch) if ch in char_freq else 26
 
 
-def gen_x_y_for_word(word: str) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+def gen_x_y_for_word(word: str) -> tuple[NDArray[np.int32], NDArray[np.int32]]:
     """
     returns a (combinations - 1) X 34 array, and a
     (combinations - 1) X 26 array of labels
@@ -100,10 +100,10 @@ def gen_x_y_for_word(word: str) -> tuple[NDArray[np.float32], NDArray[np.float32
 
         x.append(x_row)
         y.append(y_row)
-    return np.array(x, dtype=np.float32), np.array(y, dtype=np.float32)
+    return np.array(x, dtype=np.int32), np.array(y, dtype=np.int32)
 
 
-def gen_row(word: str) -> NDArray[np.float32]:
+def gen_row(word: str) -> NDArray[np.int32]:
     """
     returns a 1 X 34 array
     """
@@ -119,4 +119,4 @@ def gen_row(word: str) -> NDArray[np.float32]:
             x_row[33 - i] = ord(word[-1 - i]) - ord("a") + 1
         else:
             x_row[33 - i] = -1
-    return np.array(x_row, dtype=np.float32).reshape(1, -1)
+    return np.array(x_row, dtype=np.int32).reshape(1, -1)

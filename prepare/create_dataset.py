@@ -6,6 +6,8 @@ from pathlib import Path
 from prepare.data import gen_x_y_for_word
 from prepare.separate_train_test import separate_train_test
 
+from stage import STAGE
+
 
 def create_dataset(
     words_file: str = "w_train.txt",
@@ -108,7 +110,7 @@ if __name__ == "__main__":
     create_dataset(
         words_file="w_train.txt",
         output_dir="data",
-        max_words=30_000,
+        max_words=30_000 if STAGE else None,
     )
 
     # Example of loading the dataset
