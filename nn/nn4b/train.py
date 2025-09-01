@@ -3,27 +3,29 @@ import tqdm
 from torch import nn, optim
 from stage import STAGE
 
-from nn.nn1.data_loader import TrainBatchGenerator
-from nn.nn1.history import History
-from nn.nn1.selected_model.model import HangmanNet
-from nn.nn1.tst import test_model_on_game_play
+from .data_loader import TrainBatchGenerator
+from .history import History
+from .selected_model.model import HangmanNet
+from .tst import test_model_on_game_play
 
 
 def test_valid_shapes():
     for x, y in TrainBatchGenerator(batch_size=64):
         # Assert batch dimensions match
-        assert x.shape[0] == y.shape[0], (
-            f"Batch dimensions don't match: x={x.shape[0]}, y={y.shape[0]}"
+        assert x[0].shape[0] == y.shape[0], (
+            f"Batch dimensions don't match: x={x[0].shape[0]}, y={y.shape[0]}"
         )
 
         # Assert feature dimensions are correct
-        assert x.shape[1] == 34, f"x second dimension should be 34, got {x.shape[1]}"
-        assert y.shape[1] == 26, f"y second dimension should be 26, got {y.shape[1]}"
+        assert x[0].shape[1] == 2 * surr, (
+            f"x second dimension should be 34, got {x[0].shape[1]}"
+        )
 
-        print(f"✓ Shapes are valid: x={x.shape}, y={y.shape}")
+        print(f"✓ Shapes are valid: x={x[0].shape}, y={y.shape}")
         break
 
 
+surr = 3
 if STAGE:
     small_data = True
     num_epochs = 2
@@ -35,31 +37,31 @@ if STAGE:
 else:
     small_data = False
     num_epochs = 20
-    val_epoch_interval = 4
+    val_epoch_interval = 1
     save_interval = 5
     initial_lr = 1e-3
     pos_weight_coeff = 10
     scheduler_tmax = 10
 
 
-def train(model_path="models/nn1.pth", device=None, verbose=False):
+def train(model_path="models/nn2.pth", device=None, verbose=False):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = HangmanNet(input_dim=6, device=device).to(device)
 
-    model = HangmanNet(device=device).to(device)
-    pos_weight = torch.ones(26) * pos_weight_coeff
-
-    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight).to(device)
+    criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.Adam(model.parameters(), lr=initial_lr)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=scheduler_tmax)
     history = History()
 
     for epoch in tqdm.trange(num_epochs, disable=not verbose):
         total_loss = 0.0
-        for x, y in TrainBatchGenerator(batch_size=64, small_data=small_data):
-            x, y = x.to(device), y.to(device)
+        for x, y in TrainBatchGenerator(
+            batch_size=64, small_data=small_data, surr=surr
+        ):
+            x, y = (x[0].to(device), x[1].to(device)), y.to(device)
             outputs = model(x)
-            loss = criterion(outputs, y.float())
+            loss = criterion(outputs, y)
             loss.backward()
             optimizer.step()
             scheduler.step()
@@ -68,9 +70,11 @@ def train(model_path="models/nn1.pth", device=None, verbose=False):
         history.add_epoch(train_loss=total_loss)
 
         model.eval()
-        if epoch % val_epoch_interval == 0:
-            winrate = test_model_on_game_play(model_object=model)
-            history.add_epoch(val_metric=winrate)
+        with torch.no_grad():
+            model.reset_last_embedding()
+            if epoch % val_epoch_interval == 0:
+                winrate = test_model_on_game_play(model_object=model, surr=surr)
+                history.add_epoch(val_metric=winrate)
         model.train()
 
         if epoch % save_interval == 0:

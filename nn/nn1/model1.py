@@ -79,7 +79,7 @@ class HangmanNet(nn.Module):
     def predict_numpy(self, x):
         with torch.no_grad():
             x = torch.tensor(x).to(self.device).view(1, -1)
-        return F.sigmoid(self(x)).cpu().detach().numpy()
+            return F.sigmoid(self(x)).cpu().detach().numpy()
 
 
 def create_model(vocab_size=27, hidden_dim1=512, hidden_dim2=256, dropout_rate=0.3):
