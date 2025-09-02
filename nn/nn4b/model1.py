@@ -57,7 +57,7 @@ class HangmanNet(nn.Module):
         """ensure the last embedding is always the same"""
         mask = torch.ones(
             (self.embed_layer.weight.shape[0], self.embed_layer.weight.shape[0])
-        )
+        ).to(self.device)
         mask[:, -1] = 0
         mask /= mask.sum(dim=1, keepdim=True)
         self.embed_layer.weight.data = torch.matmul(mask, self.embed_layer.weight)

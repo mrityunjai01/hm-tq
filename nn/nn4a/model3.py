@@ -29,7 +29,9 @@ class HangmanNet(nn.Module):
             embed_dimension = vocab_size
 
         self.embed_layer = nn.Embedding(vocab_size, embed_dimension)
-        self.pos_embed_layer = nn.Embedding(8, embed_dimension)  # 8 position classes (0-7)
+        self.pos_embed_layer = nn.Embedding(
+            8, embed_dimension
+        )  # 8 position classes (0-7)
         self.layer1 = nn.Linear(embed_dimension, hidden_dim1)
         self.bn1 = nn.BatchNorm1d(hidden_dim1 * (input_dim + 1))
         self.dropout1 = nn.Dropout(dropout_rate)
@@ -51,7 +53,7 @@ class HangmanNet(nn.Module):
         """ensure the last embedding is always the same"""
         mask = torch.ones(
             (self.embed_layer.weight.shape[0], self.embed_layer.weight.shape[0])
-        )
+        ).to(self.device)
         mask[:, -1] = 0
         mask /= mask.sum(dim=1, keepdim=True)
         self.embed_layer.weight.data = torch.matmul(mask, self.embed_layer.weight)
@@ -69,15 +71,17 @@ class HangmanNet(nn.Module):
             Output tensor of shape (batch_size, 26) with sigmoid activation
         """
         surroundings, positions = x
-        
+
         # Get embeddings for surroundings and positions
         surr_embed = self.embed_layer(surroundings)  # (batch_size, 34, embed_dim)
-        pos_embed = self.pos_embed_layer(positions)   # (batch_size, embed_dim)
-        
+        pos_embed = self.pos_embed_layer(positions)  # (batch_size, embed_dim)
+
         # Concatenate positional embedding to surroundings
         pos_embed_expanded = pos_embed.unsqueeze(1)  # (batch_size, 1, embed_dim)
-        combined_embed = torch.cat([surr_embed, pos_embed_expanded], dim=1)  # (batch_size, 35, embed_dim)
-        
+        combined_embed = torch.cat(
+            [surr_embed, pos_embed_expanded], dim=1
+        )  # (batch_size, 35, embed_dim)
+
         x = self.layer1(combined_embed)
         x = x.view(x.size(0), -1)  # Flatten for batch norm
         x = self.bn1(x)
