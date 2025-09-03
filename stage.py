@@ -1,2 +1,2 @@
-STAGE = False
+STAGE = True
 GPU = True

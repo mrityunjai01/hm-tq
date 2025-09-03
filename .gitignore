@@ -1,6 +1,7 @@
 *.pyc
 *.parquet
-*.txt
+w_*.txt
 *.pth
 catboost_info/*
 catboost_info
+./catboost_info/

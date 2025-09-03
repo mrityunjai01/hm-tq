@@ -3,3 +3,5 @@ venvPath = "/opt/miniconda3/envs"
 venv="mfe"
 reportAny = "none"
 reportExpolicitAny = false
+typeCheckingMode = "basic"
+

@@ -1,0 +1,37 @@
+Setting up selected_model directory...
+Directory already exists: /Users/mrityunjaisingh/Downloads/hangman/nn/nn1/selected_model
+Copying model1.py to model.py...
+Copied: model1.py -> /Users/mrityunjaisingh/Downloads/hangman/nn/nn1/selected_model/model.py
+✓ Shapes are valid: x=torch.Size([2299, 34]), y=torch.Size([2299, 26])
+  0%|          | 0/2 [00:00<?, ?it/s] 50%|█████     | 1/2 [00:06<00:06,  6.08s/it]100%|██████████| 2/2 [00:12<00:00,  6.08s/it]100%|██████████| 2/2 [00:12<00:00,  6.08s/it]
+=== CatBoost Model Game Play Evaluation ===
+Testing on 3000 words...
+=== CatBoost Model Game Play Evaluation ===
+Testing on 3000 words...
+Latest Train Loss: 22.054250359535217
+Latest Validation Metric: 0.03933333333333333
+Copying model2.py to model.py...
+Copied: model2.py -> /Users/mrityunjaisingh/Downloads/hangman/nn/nn1/selected_model/model.py
+✓ Shapes are valid: x=torch.Size([2299, 34]), y=torch.Size([2299, 26])
+  0%|          | 0/2 [00:00<?, ?it/s] 50%|█████     | 1/2 [00:08<00:08,  8.42s/it]100%|██████████| 2/2 [00:17<00:00,  8.86s/it]100%|██████████| 2/2 [00:17<00:00,  8.80s/it]
+=== CatBoost Model Game Play Evaluation ===
+Testing on 3000 words...
+=== CatBoost Model Game Play Evaluation ===
+Testing on 3000 words...
+Latest Train Loss: 25.911202788352966
+Latest Validation Metric: 0.027333333333333334
+Copying model3.py to model.py...
+Copied: model3.py -> /Users/mrityunjaisingh/Downloads/hangman/nn/nn1/selected_model/model.py
+✓ Shapes are valid: x=torch.Size([2299, 34]), y=torch.Size([2299, 26])
+  0%|          | 0/2 [00:00<?, ?it/s] 50%|█████     | 1/2 [00:07<00:07,  7.65s/it]100%|██████████| 2/2 [00:15<00:00,  7.51s/it]100%|██████████| 2/2 [00:15<00:00,  7.53s/it]
+=== CatBoost Model Game Play Evaluation ===
+Testing on 3000 words...
+=== CatBoost Model Game Play Evaluation ===
+Testing on 3000 words...
+Latest Train Loss: 146.6021991968155
+Latest Validation Metric: 0.007
+total 8
+drwxr-xr-x@  4 mrityunjaisingh  staff   128 Sep  1 02:03 .
+drwxr-xr-x@ 15 mrityunjaisingh  staff   480 Sep  1 16:29 ..
+drwxr-xr-x@  3 mrityunjaisingh  staff    96 Sep  1 17:03 __pycache__
+-rw-r--r--@  1 mrityunjaisingh  staff  2721 Sep  1 17:03 model.py
