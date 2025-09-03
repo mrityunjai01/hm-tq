@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+from skops.io import load  # pyright: ignore[reportMissingTypeStubs]
 
 from game.play_game import play_game
 from .predict import predict
@@ -26,8 +27,7 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
             print(f"already guessed: {guess_fn.already_guessed}")
 
         sorted_predictions: list[int] = predict(
-            current_word,
-            model,
+            current_word, model, surr=surr, already_guessed=guess_fn.already_guessed
         )
 
         for idx in sorted_predictions:

@@ -48,7 +48,6 @@ def predict(
     k: int = 3,
 ) -> list[int]:
     """I will use model to predict a char from 'a' to 'z' for each '_'"""
-    original_word_len = len(word)
 
     padded_word = "{" * surr + word + "{" * surr
     blank_positions = [i for i, char in enumerate(padded_word) if char == "_"]
@@ -74,7 +73,7 @@ def predict(
             spot_predict(
                 encoded_word, model, pos, surr, already_guessed, eq_sweeps=False
             )
-    at_least_one_pred = 1 - (1 - encoded_word[blank_positions]).prod(axis=0)
+    at_least_one_pred = encoded_word[blank_positions].max(axis=0)
     return np.argsort(at_least_one_pred).tolist()[::-1]
 
 

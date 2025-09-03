@@ -4,7 +4,7 @@ import numpy as np
 
 initial_eq_sweeps = 2
 eq_k = 3
-initial_sweeps = 2
+initial_sweeps = 8
 target_vocab_size = 27  # a-z
 
 
@@ -48,7 +48,6 @@ def predict(
     k: int = 3,
 ) -> list[int]:
     """I will use model to predict a char from 'a' to 'z' for each '_'"""
-    original_word_len = len(word)
 
     padded_word = "{" * surr + word + "{" * surr
     blank_positions = [i for i, char in enumerate(padded_word) if char == "_"]

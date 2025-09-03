@@ -1,92 +1,49 @@
-import itertools
-import json
-from typing import Any
-
 import numpy as np
 from numpy.typing import NDArray
 
-from .combinations import create_combinations, sort_key
-from .base_model import char_freq_values
-
-unknown_row = char_freq_values + [0]
-unknown_row = np.array(unknown_row, dtype=np.float32)
-unknown_row /= unknown_row.sum()
-
-
-def onehot(x: list[int]) -> NDArray[np.float32]:
-    result = []
-    # breakpoint()
-    for w in x:
-        if w > 26:
-            result.append(unknown_row)
-
-        else:
-            a = np.zeros(27, dtype=np.float32)
-            a[w] = 1
-            result.append(a)
-
-    return np.array(result, dtype=np.float32)
+from .combinations import sort_key
+import torch
 
 
 def gen_x_y_for_word(
-    word: str, surr: int, pos_embed_size: int = 8
-) -> tuple[tuple[NDArray[np.float32], NDArray[np.int32]], NDArray[np.int32]]:
+    word: str,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:  # pyright: ignore[reportInvalidTypeArguments]
     """
-    Returns word-level sequences without padding for attention mechanism.
-    Returns sequences of full words with position embeddings.
+    Generates masked word sequences for BERT-style training.
+    Randomly masks at most 3 character types with '{' token.
+    Returns: (masked_word_onehot, original_word_indices)
     """
-    x_word_sequences: list[NDArray[np.float32]] = []
-    x_positions: list[int] = []
-    y: list[list[int]] = []
-    
-    original_word_len = len(word)
-    
-    # Convert word to one-hot without padding
-    word_chars = [ord(c) - ord("a") for c in word]
-    word_onehot = onehot(word_chars)
-    
-    # For each character position, create target
-    for i in range(len(word)):
-        position_fraction = i / original_word_len
-        position_encoding = min(pos_embed_size - 1, int(position_fraction * pos_embed_size))
-        
-        x_word_sequences.append(word_onehot)
-        x_positions.append(position_encoding)
-        y.append([ord(word[i]) - ord("a")])
+    import random
 
-    set_chars = set(word)
-    sorted_chars = sorted(list(set_chars), key=sort_key)
+    # Get unique characters in word
+    unique_chars = list(set(word))
 
-    for combination in create_combinations(sorted_chars):
-        masked_word = word
-        for ch in set_chars:
-            if ch not in combination:
-                masked_word = masked_word.replace(ch, "|")
+    sorted_chars = sorted(unique_chars, key=sort_key)
 
-        # Convert masked word to indices, replacing | with 27 (unknown)
-        masked_chars = []
-        for c in masked_word:
-            if c == "|":
-                masked_chars.append(27)  # Unknown token
-            else:
-                masked_chars.append(ord(c) - ord("a"))
-        
-        masked_onehot = onehot(masked_chars)
-        
-        for i in range(len(masked_word)):
-            if masked_word[i] == "|":
-                position_fraction = i / original_word_len
-                position_encoding = min(pos_embed_size - 1, int(position_fraction * pos_embed_size))
-                
-                x_word_sequences.append(masked_onehot)
-                x_positions.append(position_encoding)
-                y.append([ord(word[i]) - ord("a")])
+    # Randomly select at most 3 character types to mask
+    max_num_to_mask = min(6, random.randint(1, len(unique_chars)))
+    exp_num_to_mask = min(3, random.randint(1, len(unique_chars)))
+    chars_to_mask = []
+    last_idx = len(sorted_chars) - 1
+    p = 2 * exp_num_to_mask / len(sorted_chars)
+    while len(chars_to_mask) < max_num_to_mask and last_idx >= 0:
+        if random.random() < p:
+            chars_to_mask.append(sorted_chars[last_idx])
+        last_idx -= 1
 
-    x = (
-        np.array(x_word_sequences, dtype=np.float32),
-        np.array(x_positions, dtype=np.int32),
+    masked_word = word
+    for char in chars_to_mask:
+        masked_word = masked_word.replace(char, "{")
+
+    masked_chars = [ord(c) - ord("a") for c in masked_word]
+    original_chars = [ord(c) - ord("a") for c in word]
+    mask = [c == "{" for c in masked_word]
+
+    return (
+        torch.tensor(masked_chars, dtype=torch.int32),
+        torch.tensor(mask, dtype=torch.bool),
+        torch.tensor(original_chars, dtype=torch.long),
     )
-    return x, np.array(y, dtype=np.int32)
 
 
 def gen_x(word: str, surr: int) -> NDArray[np.int32]:
@@ -112,8 +69,10 @@ def gen_x(word: str, surr: int) -> NDArray[np.int32]:
 
 
 if __name__ == "__main__":
-    result = gen_x_y_for_word("catez", 3)
-    x, y = result
+    result = gen_x_y_for_word(
+        "catez",
+    )
+    x, mask, y = result
     assert isinstance(x, tuple)
     # breakpoint()
     assert x[0].shape[1] == 6

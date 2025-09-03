@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 from .gen_functions import gen_x_y_for_word
@@ -17,31 +16,49 @@ class TrainBatchGenerator:
         self.surr = surr
         self.pos_embed_size = pos_embed_size
         with open(words_file, "r") as f:
-            self.words = [line.strip() for line in f.readlines()]
-        if small_data:
-            self.words = self.words[:1000]
+            words = [line.strip() for line in f.readlines()]
+            if small_data:
+                words = words[:2000]
+            self.words_by_size = {}
+            for word in words:
+                if len(word) not in self.words_by_size:
+                    self.words_by_size[len(word)] = []
+                self.words_by_size[len(word)].append(word)
+        self.max_len = max(self.words_by_size.keys())
+
+        self.curr_len = min(self.words_by_size.keys())
         self.curr_idx = 0
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self.curr_idx >= len(self.words):
-            raise StopIteration
-        batch = self.words[
-            self.curr_idx : min(len(self.words), self.curr_idx + self.batch_size)
+        if self.curr_idx >= len(self.words_by_size[self.curr_len]):
+            if self.curr_len >= self.max_len:
+                raise StopIteration
+            else:
+                self.curr_len += 1
+                while (
+                    self.curr_len not in self.words_by_size
+                    or len(self.words_by_size[self.curr_len]) == 0
+                ) and (self.curr_len <= self.max_len):
+                    self.curr_len += 1
+                self.curr_idx = 0
+
+        batch = self.words_by_size[self.curr_len][
+            self.curr_idx : min(
+                len(self.words_by_size[self.curr_len]), self.curr_idx + self.batch_size
+            )
         ]
         self.curr_idx += self.batch_size
 
-        data = [
-            gen_x_y_for_word(word, self.surr, pos_embed_size=self.pos_embed_size)
-            for word in batch
-        ]
-        x_surr = np.concatenate([d[0][0] for d in data], axis=0)
-        x_pos = np.concatenate([d[0][1] for d in data], axis=0)
-        y_batch = np.concatenate([d[1] for d in data], axis=0).flatten()
+        data = [gen_x_y_for_word(word) for word in batch]
+        x = torch.stack(
+            [d[0] for d in data],
+        )
+        mask = torch.stack(
+            [d[1] for d in data],
+        )
+        y = torch.stack([d[2] for d in data])
 
-        return (
-            torch.from_numpy(x_surr),
-            torch.from_numpy(x_pos).long(),
-        ), torch.from_numpy(y_batch).long()
+        return x, mask, y
