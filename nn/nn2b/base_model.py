@@ -26,5 +26,5 @@ class BaseHangmanModel(nn.Module):
                     nn.init.zeros_(m.bias)
 
     def reset_last_embedding(self):
-        """the last embedding should be reset to make it a sort of null embedding"""
+        """retired"""
         pass
