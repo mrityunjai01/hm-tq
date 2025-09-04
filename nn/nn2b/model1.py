@@ -39,10 +39,14 @@ class HangmanNet(BaseHangmanModel):
             nhead=num_heads,
             dim_feedforward=hidden_dim * 4,
             dropout=dropout_rate,
-            activation="relu",
+            activation="gelu",
             batch_first=True,
+            layer_norm_eps=5e-5,
         )
-        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer,
+            num_layers=num_layers,
+        )
 
         # Output projection to character vocabulary
         self.output_projection = nn.Linear(hidden_dim, 26)  # Only predict a-z (not '{')
