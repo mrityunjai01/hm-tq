@@ -6,6 +6,7 @@ import numpy as np
 import torch
 
 from game.play_game import play_game
+from nn.nn2a_nopos.predict import fake_predict
 from .scrap import scrap_g
 from tqdm import tqdm
 
@@ -40,6 +41,7 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
     Returns:
         Guess function for use with play_game
     """
+    prim_model, sec_model = model
 
     def guess_fn(current_word: str) -> str:
         if not hasattr(guess_fn, "already_guessed"):
@@ -53,17 +55,19 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
             if verbose:
                 print(f"already guessed: {guess_fn.already_guessed}")
 
-            predict_output: list[tuple[float, int]] = predict(
+            prim_output: list[tuple[float, int]] = predict(
                 current_word,
-                model,
+                prim_model,
                 # already_guessed=guess_fn.already_guessed,
                 verbose=verbose,
-                mult_factor=1.5,
+                mult_factor=2.0,
             )
-            # scrap_output = scrap_g(current_word)
-            scrap_output = []
+            sec_output: list[tuple[float, int]] = fake_predict(
+                current_word, sec_model, surr, guess_fn.already_guessed
+            )
+            sec_output = []
             sorted_predictions = [
-                v for _, v in sorted(scrap_output + predict_output, reverse=True)
+                v for _, v in sorted(prim_output + sec_output, reverse=True)
             ]
             guess_fn.last_word = current_word
             guess_fn.cached_preds = sorted_predictions
@@ -183,42 +187,6 @@ def model_single_game(
     return model_result
 
 
-def search_models(model):
-    results = []
-    model_filepaths = []
-
-    for filepath in [
-        "nn2b.pth_checkpoint_58",
-        "nn2b.pth_checkpoint_2",
-        "nn2b.pth_checkpoint_464",
-    ]:
-        if re.fullmatch("nn2b.*", os.path.basename(filepath)):
-            print(f"found a match at {filepath}")
-            try:
-                model.load_state_dict(
-                    torch.load(
-                        os.path.join("models", filepath),
-                        weights_only=True,
-                        map_location=torch.device(device),
-                    )
-                )
-                result = test_model_on_game_play(
-                    model_object=model,
-                    verbose=False,
-                )
-            except:
-                print(f"cant use model at {filepath} for prediction")
-                result = "Nan"
-
-            model_filepaths.append(filepath)
-            results.append(result)
-
-    results_file = "junk"
-    with open(results_file, "w") as f:
-        for filepath, res in zip(model_filepaths, results):
-            f.write(filepath + "," + str(res) + "\n")
-
-
 if __name__ == "__main__":
     device = "cpu"
     model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
@@ -228,4 +196,4 @@ if __name__ == "__main__":
     model.load_state_dict(
         torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
     )
-    result = test_model_on_game_play(model_object=model, verbose=True)
+    result = test_model_on_game_play(model_object=(model, model), verbose=True)

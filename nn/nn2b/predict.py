@@ -38,8 +38,8 @@ def predict(
 
     # at_least_one_pred = predictions[blank_positions].max(axis=0)
     at_least_one_pred = (
-        1 - (1 - predictions[blank_positions]).prod(axis=0) * mult_factor
-    )
+        1 - (1 - predictions[blank_positions]).prod(axis=0)
+    ) * mult_factor
 
     # at_least_one_pred = predictions[blank_positions].mean(axis=0)
     return sorted(

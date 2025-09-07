@@ -43,6 +43,19 @@ def spot_predict(
     encoded_word[pos] = predictions
 
 
+def fake_predict(
+    word: str,
+    model,
+    surr: int,
+    already_guessed: set[int],
+) -> list[tuple[float, int]]:
+    """I will use model to predict a char from 'a' to 'z' for each '_'"""
+    probs = np.random.uniform(0, 0.001, (26,)).tolist()
+    letters = list(range(26))
+
+    return list(zip(probs, letters))
+
+
 def predict(
     word: str,
     model,
