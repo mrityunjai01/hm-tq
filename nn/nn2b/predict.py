@@ -8,17 +8,19 @@ def predict(
     word: str,
     model,
     verbose=False,
-) -> list[int]:
+    mult_factor=1.0,
+) -> list[tuple[float, int]]:
     """I will use model to predict a char from 'a' to 'z' for each '_'"""
     if verbose:
         breakpoint()
 
     n_known_chars = set([ch for ch in word if ch != "_"])
     if len(n_known_chars) == 0:
-        return [ord(c) - ord("a") for c in char_freq]
+        return [(100.0 - i, ord(c) - ord("a")) for i, c in enumerate(char_freq)]
     elif len(n_known_chars) == 1:
         return [
-            ord(c) - ord("a") for c in most_cooccuring_values[next(iter(n_known_chars))]
+            (100.0 - i, ord(c) - ord("a"))
+            for i, c in enumerate(most_cooccuring_values[next(iter(n_known_chars))])
         ]
 
     blank_positions = [i for i, char in enumerate(word) if char == "_"]
@@ -35,9 +37,14 @@ def predict(
     predictions = model.predict_numpy(x).squeeze()
 
     # at_least_one_pred = predictions[blank_positions].max(axis=0)
-    at_least_one_pred = 1 - (1 - predictions[blank_positions]).prod(axis=0)
+    at_least_one_pred = (
+        1 - (1 - predictions[blank_positions]).prod(axis=0) * mult_factor
+    )
+
     # at_least_one_pred = predictions[blank_positions].mean(axis=0)
-    return np.argsort(at_least_one_pred).tolist()[::-1]
+    return sorted(
+        [(v, i) for i, v in enumerate(at_least_one_pred.tolist())], reverse=True
+    )
 
 
 def single_shot(word, model):
