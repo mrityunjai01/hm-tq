@@ -92,7 +92,10 @@ def predict(
                 encoded_word, model, pos, surr, already_guessed, eq_sweeps=False
             )
     at_least_one_pred = 1 - (1 - encoded_word[blank_positions]).prod(axis=0)
-    return at_least_one_pred
+
+    return sorted(
+        [(v, i) for i, v in enumerate(at_least_one_pred.tolist())], reverse=True
+    )
 
 
 def beam_search_predict(word, model, surr, k):
