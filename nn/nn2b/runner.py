@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from game.play_game import play_game
-from nn.nn2b.selector import append_to_file
+from nn.nn2b.selector import SelectorNN, append_to_file
 from .scrap import scrap_g
 from tqdm import tqdm
 
@@ -16,6 +16,23 @@ pass_words = []
 words_lost = []
 
 pass_filename = "pass.bin"
+train_phase = False
+
+selector_model_obj = SelectorNN(input_dim=12, hidden_dim=48, output_cardinality=6)
+selector_model_obj.load_state_dict(
+    torch.load(
+        "models/selector_nn.pth",
+        weights_only=True,
+    )
+)
+
+
+def selector_model(x: torch.Tensor, targets: list[int]) -> list[tuple[float, int]]:
+    selector_model_obj.eval()
+    with torch.no_grad():
+        output = selector_model_obj(x).numpy()
+
+    return sorted(list(zip(output.flatten().tolist(), targets)), reverse=True)
 
 
 def save_pass_words():
@@ -62,27 +79,46 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
                 mult_factor=1.5,
             )
             scrap_output = scrap_g(current_word)
-            if len(scrap_output) > 0 and not initial_phase:
-                x = (
-                    [v[0] for v in predict_output[:3]]
-                    + [v[0] for v in predict_output[:3]]
-                    + [v[0] for v in scrap_output[:3]]
-                    + [v[0] for v in scrap_output[:3]]
-                )
+            predict_map = {v: k for k, v in predict_output}
+            scrap_map = {v: k for k, v in scrap_output}
+            selector_output = []
 
-                replacements = [
-                    ord(correct_word[i]) - ord("a")
-                    for i in range(len(current_word))
-                    if current_word[i] == "_"
-                ]
-                targets = [
-                    1 if v in replacements else 0
-                    for _, v in (predict_output[:3] + scrap_output[:3])
-                ]
-                append_to_file(x, targets)
+            if len(scrap_output) > 0:
+                if train_phase:
+                    if len(scrap_output) > 0 and not initial_phase:
+                        x = (
+                            [v[0] for v in predict_output[:3]]
+                            + [scrap_map[v[1]] for v in predict_output[:3]]
+                            + [v[0] for v in scrap_output[:3]]
+                            + [predict_map[v[1]] for v in scrap_output[:3]]
+                        )
+
+                        replacements = [
+                            ord(correct_word[i]) - ord("a")
+                            for i in range(len(current_word))
+                            if current_word[i] == "_"
+                        ]
+                        targets = [
+                            1 if v in replacements else 0
+                            for _, v in (predict_output[:3] + scrap_output[:3])
+                        ]
+                        append_to_file(x, targets)
+                else:
+                    selector_model_obj.eval()
+                    x = torch.tensor(
+                        [v[0] for v in predict_output[:3]]
+                        + [scrap_map[v[1]] for v in predict_output[:3]]
+                        + [v[0] for v in scrap_output[:3]]
+                        + [predict_map[v[1]] for v in scrap_output[:3]],
+                        dtype=torch.float32,
+                    )
+                    targets = [v[1] for v in (predict_output[:3] + scrap_output[:3])]
+                    selector_output = [
+                        v[1] for v in selector_model(x.unsqueeze(0), targets)[:2]
+                    ]
 
             # scrap_output = []
-            sorted_predictions = [
+            sorted_predictions = selector_output + [
                 v for _, v in sorted(scrap_output + predict_output, reverse=True)
             ]
             guess_fn.last_word = current_word
