@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from game.play_game import play_game
+from nn.nn2b.selector import append_to_file
 from .scrap import scrap_g
 from tqdm import tqdm
 
@@ -40,11 +41,12 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
         Guess function for use with play_game
     """
 
-    def guess_fn(current_word: str) -> str:
+    def guess_fn(current_word: str, correct_word: str) -> str:
         if not hasattr(guess_fn, "already_guessed"):
             guess_fn.already_guessed = set()  # pyright: ignore[reportFunctionMemberAccess]
             guess_fn.last_word = ""
             guess_fn.cached_preds = None
+        initial_phase = len(set([ch for ch in current_word if ch != "_"])) < 3
 
         if (current_word == guess_fn.last_word) and (guess_fn.cached_preds is not None):
             sorted_predictions = guess_fn.cached_preds
@@ -60,8 +62,25 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
                 mult_factor=1.5,
             )
             scrap_output = scrap_g(current_word)
-            # if len(scrap_output) > 0:
-            # breakpoint()
+            if len(scrap_output) > 0 and not initial_phase:
+                x = (
+                    [v[0] for v in predict_output[:3]]
+                    + [v[0] for v in predict_output[:3]]
+                    + [v[0] for v in scrap_output[:3]]
+                    + [v[0] for v in scrap_output[:3]]
+                )
+
+                replacements = [
+                    ord(correct_word[i]) - ord("a")
+                    for i in range(len(current_word))
+                    if current_word[i] == "_"
+                ]
+                targets = [
+                    1 if v in replacements else 0
+                    for _, v in (predict_output[:3] + scrap_output[:3])
+                ]
+                append_to_file(x, targets)
+
             # scrap_output = []
             sorted_predictions = [
                 v for _, v in sorted(scrap_output + predict_output, reverse=True)
