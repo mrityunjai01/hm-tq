@@ -11,7 +11,7 @@ word_dictionary = load_word_dictionary()
 
 
 def scrap_g(word):
-    if (word.count("_") >= len(word) - 4) and (word.count("_") >= 2):
+    if (word.count("_") >= len(word) - 6) and (word.count("_") >= 2):
         return []
 
     span = 5

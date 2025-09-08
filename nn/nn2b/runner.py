@@ -59,8 +59,10 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
                 verbose=verbose,
                 mult_factor=1.5,
             )
-            # scrap_output = scrap_g(current_word)
-            scrap_output = []
+            scrap_output = scrap_g(current_word)
+            # if len(scrap_output) > 0:
+            # breakpoint()
+            # scrap_output = []
             sorted_predictions = [
                 v for _, v in sorted(scrap_output + predict_output, reverse=True)
             ]
@@ -187,7 +189,7 @@ if __name__ == "__main__":
     model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
     model = torch.compile(model, mode="max-autotune")
 
-    model_filepath = "models/nn2b.pth_checkpoint_2"
+    model_filepath = "models/nn2b.pth_checkpoint_58"
     model.load_state_dict(
         torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
     )
