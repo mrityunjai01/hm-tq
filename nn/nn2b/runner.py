@@ -114,12 +114,12 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
                     )
                     targets = [v[1] for v in (predict_output[:3] + scrap_output[:3])]
                     selector_output = [
-                        v[1] for v in selector_model(x.unsqueeze(0), targets)[:2]
+                        v[1] for v in selector_model(x.unsqueeze(0), targets)[:4]
                     ]
 
             # scrap_output = []
             sorted_predictions = selector_output + [
-                v for _, v in sorted(scrap_output + predict_output, reverse=True)
+                v[1] for v in sorted(scrap_output + predict_output, reverse=True)
             ]
             guess_fn.last_word = current_word
             guess_fn.cached_preds = sorted_predictions
