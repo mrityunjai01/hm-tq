@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 
+from nn.nn2b.validate import validate_predictions
+
 from .base_model import char_freq, most_cooccuring_values
 
 
@@ -8,7 +10,6 @@ def predict(
     word: str,
     model,
     verbose=False,
-    mult_factor=1.0,
 ) -> list[tuple[float, int]]:
     """I will use model to predict a char from 'a' to 'z' for each '_'"""
     if verbose:
@@ -38,6 +39,13 @@ def predict(
 
     # at_least_one_pred = predictions[blank_positions].max(axis=0) * mult_factor
     at_least_one_pred = 1 - (1 - predictions[blank_positions]).prod(axis=0)
+    output = sorted(
+        [(v, i) for i, v in enumerate(at_least_one_pred.tolist())], reverse=True
+    )
+    try:
+        validate_predictions(output, [])
+    except AssertionError as e:
+        breakpoint()
 
     # at_least_one_pred = predictions[blank_positions].mean(axis=0)
     return sorted(
