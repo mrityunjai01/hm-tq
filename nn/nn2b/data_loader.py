@@ -10,6 +10,7 @@ class TrainBatchGenerator:
         words_file="w_train.txt",
         pos_embed_size=4,
         small_data=False,
+        small_words=False,
         surr=3,
     ):
         self.batch_size = batch_size
@@ -24,7 +25,10 @@ class TrainBatchGenerator:
                 if len(word) not in self.words_by_size:
                     self.words_by_size[len(word)] = []
                 self.words_by_size[len(word)].append(word)
-        self.max_len = max(self.words_by_size.keys())
+        if small_words:
+            self.max_len = 5
+        else:
+            self.max_len = max(self.words_by_size.keys())
 
         self.curr_len = min(self.words_by_size.keys())
         self.curr_idx = 0
