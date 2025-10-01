@@ -3,12 +3,19 @@
 Optuna hyperparameter tuning for CatBoost hangman model.
 """
 
-import optuna
+import os
+
 import numpy as np
+import optuna
+from catboost import CatBoostClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.multioutput import MultiOutputClassifier
-from catboost import CatBoostClassifier
+from skops.io import dump
+
+from cb.cb_game_test import test_model_on_game_play
 from prepare.create_dataset import load_dataset
+
+from stage import STAGE, GPU
 
 
 def objective(trial):
@@ -21,108 +28,91 @@ def objective(trial):
     Returns:
         Mean cross-validation score (negated for minimization)
     """
-    # Load dataset
     X, Y = load_dataset("data")
+    if STAGE:
+        X = X[:2000]
+        Y = Y[:2000]
 
-    # Sample hyperparameters
-    iterations = trial.suggest_int("iterations", 500, 2000, step=500)
+    if STAGE:
+        iterations = trial.suggest_int("iterations", 2, 9, step=1)
+    else:
+        iterations = trial.suggest_int("iterations", 200, 900, step=100)
     learning_rate = trial.suggest_float("learning_rate", 0.01, 0.3, log=True)
     depth = trial.suggest_int("depth", 4, 10)
 
-    # Create model
     cb = MultiOutputClassifier(
         CatBoostClassifier(
             iterations=iterations,
             learning_rate=learning_rate,
             depth=depth,
-            verbose=False,
             random_seed=42,
+            cat_features=list(range(26)),
+            task_type="GPU" if GPU else "CPU",
         )
     )
-
-    # Use cross-validation with hamming loss (lower is better)
-    scores = cross_val_score(
-        cb,
+    cb: MultiOutputClassifier = cb.fit(
         X,
         Y,
-        cv=3,  # 3-fold CV for speed
-        scoring="neg_hamming_loss",  # Minimize hamming loss
-        n_jobs=-1,
+    )  # pyright: ignore[reportUnknownMemberType]
+    mean_score = test_model_on_game_play(
+        model_filepath=None, model_object=cb, max_test_words=100 if STAGE else None
     )
-
-    # Return mean score (already negative for minimization)
-    mean_score = np.mean(scores)
-
-    # Report intermediate result for pruning
-    trial.report(mean_score, 0)
 
     return mean_score
 
 
 def main():
     """Run hyperparameter tuning."""
-    print("=== Optuna Hyperparameter Tuning ===")
 
-    # Check if dataset exists
-    try:
-        X, Y = load_dataset("data")
-        print(f"Dataset loaded: X={X.shape}, Y={Y.shape}")
-    except FileNotFoundError:
-        print("Dataset not found. Please run 'python prepare/create_dataset.py' first.")
-        return
-
-    # Create study
     study = optuna.create_study(
         direction="maximize",  # Maximize neg_hamming_loss (minimize hamming_loss)
-        pruner=optuna.pruners.MedianPruner(n_startup_trials=5),
     )
 
-    # Optimize
-    n_trials = 50
+    n_trials = 3 if STAGE else 50
     print(f"Starting optimization with {n_trials} trials...")
 
     study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
 
-    # Results
-    print("\n=== Optimization Results ===")
     print(f"Best trial: {study.best_trial.number}")
     print(f"Best score (neg_hamming_loss): {study.best_trial.value:.6f}")
     print(f"Best params: {study.best_trial.params}")
 
-    # Show parameter importance
     print("\n=== Parameter Importance ===")
     importance = optuna.importance.get_param_importances(study)
     for param, imp in importance.items():
         print(f"{param}: {imp:.4f}")
 
-    # Train final model with best parameters
     print("\n=== Training Final Model ===")
     best_params = study.best_trial.params
+    iterations, learning_rate, depth = (
+        best_params["iterations"],
+        best_params["learning_rate"],
+        best_params["depth"],
+    )
 
     cb_final = MultiOutputClassifier(
         CatBoostClassifier(
-            iterations=best_params["iterations"],
-            learning_rate=best_params["learning_rate"],
-            depth=best_params["depth"],
-            verbose=True,
+            iterations=iterations,
+            learning_rate=learning_rate,
+            depth=depth,
             random_seed=42,
+            cat_features=list(range(26)),
+            task_type="GPU" if GPU else "CPU",
         )
     )
 
-    cb_final.fit(X, Y)
+    X, Y = load_dataset("data")
+    if STAGE:
+        X = X[:2000]
+        Y = Y[:2000]
 
-    # Save best model
-    import os
-    from skops.io import dump
-
-    os.makedirs("models", exist_ok=True)
-    model_path = "models/cb_tuned.pth"
-    dump(cb_final, model_path)
-
-    print(f"\nBest model saved to: {model_path}")
-    print("To test the tuned model, run: python cb/test.py")
+    cb_final: MultiOutputClassifier = cb_final.fit(
+        X,
+        Y,
+    )  # pyright: ignore[reportUnknownMemberType]
+    model_filepath = "models/cb_tuned.pth"
+    dump(cb_final, model_filepath)
 
 
 if __name__ == "__main__":
     main()
-
