@@ -26,6 +26,8 @@ class TrainBatchGenerator:
                 words = words[:20000]
             self.words_by_size = {}
             for word in words:
+                if len(word) < 3:
+                    continue
                 if len(word) not in self.words_by_size:
                     self.words_by_size[len(word)] = []
                 self.words_by_size[len(word)].append(word)
