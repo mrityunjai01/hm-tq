@@ -1,4 +1,7 @@
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List
 
 import numpy as np
 
@@ -46,12 +49,26 @@ def reset_guesser_state(guess_fn):
         guess_fn.already_guessed.clear()
 
 
+def test_words_batch(words_batch: List[str], model, thread_id: int = 0) -> List[int]:
+    """Test a batch of words in a single thread."""
+    results = []
+    for word in words_batch:
+        result = model_single_game(
+            test_word=word,
+            model=model,
+            verbose=False,
+        )
+        results.append(result)
+    return results
+
+
 def test_model_on_game_play(
     model_object=None,
     test_words_file: str = "w_test.txt",
     max_test_words: int | None = None,
     small_words=False,
     verbose=False,
+    num_threads: int = 8,
 ) -> float:
     """
     Test the trained model by playing actual hangman games.
@@ -86,18 +103,61 @@ def test_model_on_game_play(
         model = model_object
     else:
         raise ValueError("Either model_filepath or model_object must be provided.")
-    model_results: list[int] = []
 
-    for i, word in enumerate(test_words):
-        result = model_single_game(
-            test_word=word,
-            model=model,
-            verbose=False,
-        )
-        model_results.append(result)
+    # Use parallel processing if we have at least 100 words
+    if len(test_words) >= 100:
         if verbose:
-            if (i + 1) % 100 == 0:
-                print(f"Played {i + 1}/{len(test_words)} games")
+            print(f"Using {num_threads} threads for parallel testing")
+
+        # Split words into batches for each thread
+        batch_size = len(test_words) // num_threads
+        word_batches = []
+        for i in range(num_threads):
+            start_idx = i * batch_size
+            if i == num_threads - 1:  # Last batch gets remaining words
+                end_idx = len(test_words)
+            else:
+                end_idx = (i + 1) * batch_size
+            word_batches.append(test_words[start_idx:end_idx])
+
+        model_results: list[int] = []
+
+        # Use ThreadPoolExecutor for parallel processing
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            # Submit all batches
+            future_to_batch = {
+                executor.submit(test_words_batch, batch, model, i): i
+                for i, batch in enumerate(word_batches) if batch  # Only submit non-empty batches
+            }
+
+            # Collect results as they complete
+            completed_batches = 0
+            for future in as_completed(future_to_batch):
+                batch_results = future.result()
+                model_results.extend(batch_results)
+                completed_batches += 1
+
+                if verbose:
+                    total_completed = len(model_results)
+                    print(f"Completed batch {completed_batches}/{len(future_to_batch)}, "
+                          f"total games: {total_completed}/{len(test_words)}")
+
+    else:
+        # Sequential processing for small datasets
+        if verbose:
+            print("Using sequential processing (< 100 words)")
+
+        model_results: list[int] = []
+        for i, word in enumerate(test_words):
+            result = model_single_game(
+                test_word=word,
+                model=model,
+                verbose=False,
+            )
+            model_results.append(result)
+            if verbose:
+                if (i + 1) % 10 == 0:
+                    print(f"Played {i + 1}/{len(test_words)} games")
 
     model_win_rate = float(np.mean(model_results))
     return model_win_rate
