@@ -8,7 +8,7 @@ from torch.amp.grad_scaler import GradScaler
 
 from .data_loader import TrainBatchGenerator
 from .history import History
-from nn.nn2b.model1 import HangmanNet, count_parameters
+from .model1 import HangmanNet, count_parameters
 from .tst import test_model_on_game_play
 from .early_stopping import EarlyStopping
 
