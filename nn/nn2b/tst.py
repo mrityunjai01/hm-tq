@@ -19,19 +19,19 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
         Guess function for use with play_game
     """
 
-    def guess_fn(current_word: str) -> str:
+    def guess_fn(current_word: str, actual_word: str) -> str:
         if not hasattr(guess_fn, "already_guessed"):
             guess_fn.already_guessed = set()  # pyright: ignore[reportFunctionMemberAccess]
 
         if verbose:
             print(f"already guessed: {guess_fn.already_guessed}")
 
-        sorted_predictions: list[int] = predict(
+        sorted_predictions: list[tuple[float, int]] = predict(
             current_word,
             model,
         )
 
-        for idx in sorted_predictions:
+        for _, idx in sorted_predictions:
             if idx not in guess_fn.already_guessed:
                 guess_fn.already_guessed.add(idx)
                 return chr(idx + ord("a"))
@@ -50,6 +50,7 @@ def test_model_on_game_play(
     model_object=None,
     test_words_file: str = "w_test.txt",
     max_test_words: int | None = None,
+    small_words=False,
     verbose=False,
 ) -> float:
     """
@@ -70,6 +71,9 @@ def test_model_on_game_play(
 
     with open(test_words_file, "r") as f:
         test_words = [w.strip() for w in f.readlines()]
+
+    if small_words:
+        test_words = [w for w in test_words if len(w) <= 5]
 
     if max_test_words and len(test_words) > max_test_words:
         test_words = test_words[:max_test_words]
@@ -128,5 +132,5 @@ if __name__ == "__main__":
     model = HangmanNet(vocab_size=27, device=device, num_layers=2).to(device)
     model_filepath = "nn2b_gc_27.pth_checkpoint_27"
     model.load_state_dict(torch.load(model_filepath, weights_only=True))
-    torch.load(model_filepath, map_location=device
+    torch.load(model_filepath, map_location=device)
     test_model_on_game_play()
