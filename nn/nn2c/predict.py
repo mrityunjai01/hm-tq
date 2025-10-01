@@ -33,7 +33,9 @@ def predict(
     x = torch.tensor(char_indices, dtype=torch.int32)
     predictions = model.predict_numpy(x).squeeze()
     at_least_one_pred = 1 - (1 - predictions[blank_positions]).prod(axis=0)
-    return [(v, i) for i, v in enumerate(at_least_one_pred.tolist())]
+    return sorted(
+        [(v, i) for i, v in enumerate(at_least_one_pred.tolist())], reverse=True
+    )
 
 
 def single_shot(word, model):

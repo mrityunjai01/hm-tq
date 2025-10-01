@@ -23,14 +23,31 @@ def gen_x_y_for_word(
     exp_num_to_mask = min(3, random.randint(1, len(unique_chars)))
     chars_to_mask = []
     last_idx = len(sorted_chars) - 1
-    p = exp_num_to_mask / len(sorted_chars)
+    second_p = 0.8
+    p = exp_num_to_mask / len(sorted_chars) / second_p
     while len(chars_to_mask) < max_num_to_mask and last_idx >= 0:
-        if random.random() < p:
-            chars_to_mask.append(sorted_chars[last_idx])
+        chars_to_mask.append(sorted_chars[last_idx])
         last_idx -= 1
+        if random.random() < p:
+            break
+    actual_chars_to_mask = []
+    for char in chars_to_mask:
+        if random.random() < second_p:
+            actual_chars_to_mask.append(char)
+
+    # print(f"chars_to_mask = {chars_to_mask}")
+    # print(f"actual_chars_to_mask = {actual_chars_to_mask}")
+
+    if len(actual_chars_to_mask) == 0:
+        actual_chars_to_mask.append(sorted_chars[-1])
+
+    if len(actual_chars_to_mask) >= len(unique_chars) - 1:
+        actual_chars_to_mask = actual_chars_to_mask[
+            : -(max(0, len(actual_chars_to_mask) - (len(unique_chars) - 2)))
+        ]
 
     masked_word = word
-    for char in chars_to_mask:
+    for char in actual_chars_to_mask:
         masked_word = masked_word.replace(char, "{")
 
     masked_chars = [ord(c) - ord("a") for c in masked_word]
@@ -67,12 +84,10 @@ def gen_x(word: str, surr: int) -> NDArray[np.int32]:
 
 
 if __name__ == "__main__":
-    result = gen_x_y_for_word(
-        "catez",
-    )
+    word = "caterpillar"
+    result = gen_x_y_for_word(word)
     x, mask, y = result
-    assert isinstance(x, tuple)
-    # breakpoint()
-    assert x[0].shape[1] == 6
-    assert x[0].shape[2] == 27
-    assert x[1].shape[0] == x[0].shape[0] == y.shape[0]
+
+    print(f"x: {x}")
+    print(f"mask: {mask}")
+    print(f"y: {y}")
