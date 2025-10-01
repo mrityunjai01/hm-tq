@@ -1,10 +1,29 @@
 import os
+import pickle
 
 import numpy as np
+import torch
 
 from game.play_game import play_game
+
 from .model1 import HangmanNet
 from .predict import predict
+
+pass_words = []
+words_lost = []
+
+pass_filename = "pass.bin"
+
+
+def save_pass_words():
+    with open(pass_filename, "wb") as f:
+        pickle.dump(pass_words, f)
+
+
+def load_pass_words():
+    global pass_words
+    with open(pass_filename, "rb") as f:
+        pass_words = pickle.load(f)
 
 
 def create_model_guesser(model, verbose=False, surr: int = 3):
@@ -26,10 +45,7 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
         if verbose:
             print(f"already guessed: {guess_fn.already_guessed}")
 
-        sorted_predictions: list[int] = predict(
-            current_word,
-            model,
-        )
+        sorted_predictions: list[int] = predict(current_word, model, verbose=verbose)
 
         for idx in sorted_predictions:
             if idx not in guess_fn.already_guessed:
@@ -96,6 +112,9 @@ def test_model_on_game_play(
                 print(f"Played {i + 1}/{len(test_words)} games")
 
     model_win_rate = float(np.mean(model_results))
+    if verbose:
+        print(f"Model win rate: {model_win_rate:.2%}")
+
     return model_win_rate
 
 
@@ -111,6 +130,7 @@ def model_single_game(
         model_filepath: Path to the saved model
         test_word: The word to guess in the game
     """
+    global pass_words, words_lost
 
     assert model is not None
 
@@ -120,13 +140,36 @@ def model_single_game(
     )
     reset_guesser_state(model_guesser)
     model_result = play_game(test_word, model_guesser, verbose=verbose)
+    if model_result == 0:
+        words_lost.append(test_word)
+
+    if model_result == 0 and test_word not in pass_words:
+        pass_words.append(test_word)
+        # print(f"Failed on word: {test_word}. Total failed words: {len(words_lost)}")
+        # play = input("play?")
+        # if play == "j":
+        #     model_guesser = create_model_guesser(
+        #         model,
+        #         verbose=True,
+        #     )
+        #     play_game(test_word, model_guesser, verbose=True)
+        # elif play == "p":
+        #     pass_words.append(test_word)
+        # elif play == "sync":
+        #     save_pass_words()
+        # elif play == "clear":
+        #     pass_words = []
+
     return model_result
 
 
 if __name__ == "__main__":
     device = "cpu"
-    model = HangmanNet(vocab_size=27, device=device, num_layers=2).to(device)
-    model_filepath = "nn2b_gc_27.pth_checkpoint_27"
-    model.load_state_dict(torch.load(model_filepath, weights_only=True))
-    torch.load(model_filepath, map_location=device
-    test_model_on_game_play()
+    model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
+    model = torch.compile(model, mode="max-autotune")
+
+    model_filepath = "models/nn2b_gc_56.pth_checkpoint_56"
+    model.load_state_dict(
+        torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
+    )
+    test_model_on_game_play(model_object=model, verbose=True)
