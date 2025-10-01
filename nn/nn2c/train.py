@@ -1,5 +1,4 @@
 import torch
-import math
 import tqdm
 from torch import nn, optim
 from stage import STAGE, GPU

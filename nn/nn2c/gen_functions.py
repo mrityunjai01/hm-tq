@@ -38,13 +38,13 @@ def gen_x_y_for_word(
     # print(f"chars_to_mask = {chars_to_mask}")
     # print(f"actual_chars_to_mask = {actual_chars_to_mask}")
 
-    if len(actual_chars_to_mask) == 0:
-        actual_chars_to_mask.append(sorted_chars[-1])
-
     if len(actual_chars_to_mask) >= len(unique_chars) - 1:
         actual_chars_to_mask = actual_chars_to_mask[
             : -(max(0, len(actual_chars_to_mask) - (len(unique_chars) - 2)))
         ]
+
+    if len(actual_chars_to_mask) == 0:
+        actual_chars_to_mask.append(sorted_chars[-1])
 
     masked_word = word
     for char in actual_chars_to_mask:

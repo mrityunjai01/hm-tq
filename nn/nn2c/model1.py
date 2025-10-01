@@ -118,7 +118,7 @@ class HangmanNet(nn.Module):
     def __init__(
         self,
         vocab_size=27,  # a-z + '{'
-        hidden_dim=256,
+        hidden_dim=512,
         num_heads=8,
         num_layers=4,
         dropout_rate=0.3,
