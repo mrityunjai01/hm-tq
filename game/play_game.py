@@ -31,9 +31,7 @@ class GameState:
 def play_game(
     actual_word: str,
     guess_fn: Callable[
-        [
-            str,
-        ],
+        [str, str],
         str,
     ],
     verbose: bool = False,
@@ -52,9 +50,7 @@ def play_game(
     current_word = "".join(["_"] * len(actual_word))
 
     while not game_state.is_game_over():
-        guessed_letter = guess_fn(
-            current_word,
-        )
+        guessed_letter = guess_fn(current_word, actual_word)
 
         if verbose:
             print(f"{current_word}\n{guessed_letter}")
@@ -93,7 +89,7 @@ def interactive_game(actual_word: str) -> int:
         1 if word was guessed successfully, 0 if failed
     """
 
-    def user_guess_fn(current_word: str) -> str:
+    def user_guess_fn(current_word: str, actual_word: str) -> str:
         print(f"\nCurrent word: {current_word}")
         while True:
             guess = input("Enter your guess (single letter): ").lower().strip()

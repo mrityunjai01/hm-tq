@@ -14,7 +14,7 @@ def scrap_g(word):
     if (word.count("_") >= len(word) - 6) and (word.count("_") >= 2):
         return []
 
-    span = 5
+    span = 6
     blank_positions = [i for i in range(len(word)) if word[i] == "_"]
 
     word_len = len(word)
