@@ -59,7 +59,7 @@ class SelectorNN(nn.Module):
 def train_selector_nn():
     n_epochs = 200
 
-    model = SelectorNN(input_dim=12, hidden_dim=48, output_cardinality=6)
+    model = SelectorNN(input_dim=13, hidden_dim=48, output_cardinality=6)
     dataloader = load_data(batch_size=32)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)

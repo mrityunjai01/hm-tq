@@ -24,10 +24,10 @@ stage_hyperparam = False
 
 def inference_objective(trial):
     hconfig = HConfig(
-        selector_prefix_len=trial.suggest_int("selector_prefix_len", 0, 5),
+        selector_prefix_len=1,
         min_non_blanks=trial.suggest_int("min_non_blanks", 4, 10),
         max_blanks=trial.suggest_int("max_blanks", 1, 3),
-        span_start=trial.suggest_int("span_start", 4, 8),
+        mult_factor=trial.suggest_float("mult_factor", 1.0, 4.0, step=0.1),
     )
     device = "cpu"
     model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)

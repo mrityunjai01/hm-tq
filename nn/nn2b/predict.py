@@ -10,10 +10,9 @@ def predict(
     word: str,
     model,
     verbose=False,
+    mult_factor=1.0,
 ) -> list[tuple[float, int]]:
     """I will use model to predict a char from 'a' to 'z' for each '_'"""
-    if verbose:
-        breakpoint()
 
     n_known_chars = set([ch for ch in word if ch != "_"])
     if len(n_known_chars) == 0:
@@ -35,22 +34,16 @@ def predict(
         else:
             char_indices.append(ord(char) - ord("a"))
     x = torch.tensor(char_indices, dtype=torch.int32)
-    predictions = model.predict_numpy(x).squeeze()
+    predictions = np.array([model.predict_numpy(x).squeeze() for _ in range(5)]).max(
+        axis=0
+    )
 
     # at_least_one_pred = predictions[blank_positions].max(axis=0) * mult_factor
-    at_least_one_pred = 1 - (1 - predictions[blank_positions]).prod(axis=0)
-    output = sorted(
-        [(v, i) for i, v in enumerate(at_least_one_pred.tolist())], reverse=True
+    at_least_one_pred = (
+        np.power((1 - (1 - predictions[blank_positions]).prod(axis=0)), 4) * mult_factor
     )
-    try:
-        validate_predictions(output, [])
-    except AssertionError as e:
-        breakpoint()
-
     # at_least_one_pred = predictions[blank_positions].mean(axis=0)
-    return sorted(
-        [(v, i) for i, v in enumerate(at_least_one_pred.tolist())], reverse=True
-    )
+    return [(v, i) for i, v in enumerate(at_least_one_pred.tolist())]
 
 
 def single_shot(word, model):

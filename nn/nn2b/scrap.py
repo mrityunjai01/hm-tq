@@ -18,12 +18,13 @@ def scrap_g(word, hconfig: HConfig):
     ):
         return []
 
-    spans = [hconfig.span_start, hconfig.span_start + 1]
+    # spans = [hconfig.span_start, hconfig.span_start + 1]
+    spans = [3, 5, 6]
     blank_positions = [i for i in range(len(word)) if word[i] == "_"]
 
+    total_occurences = np.zeros(26, dtype=np.float32)
+
     word_len = len(word)
-    n_total_occ = 0
-    occurences = np.zeros(26, dtype=np.int32)
     for span in spans:
         for pos in blank_positions:
             if word_len < span:
@@ -32,8 +33,12 @@ def scrap_g(word, hconfig: HConfig):
                 end = start + span
                 if start <= pos < end:
                     pattern = word[start:end]
+                    if pattern.count("_") > len(pattern) * 0.4:
+                        continue
                     pattern = pattern.replace("_", "[a-z]")
 
+                    occurences = np.zeros(26, dtype=np.float32)
+                    n_total_occ = 0
                     for match in re.finditer(pattern, word_dictionary):
                         letter = word_dictionary[match.start() + pos - start]
                         letter_idx = ord(letter) - ord("a")
@@ -41,17 +46,23 @@ def scrap_g(word, hconfig: HConfig):
                             breakpoint()
                         occurences[letter_idx] += 1
                         n_total_occ += 1
-    if n_total_occ < hconfig.min_total_occ:
-        return []
-    occurences = occurences.astype(np.float32)
-    occurences /= n_total_occ
-    return sorted([(v, i) for i, v in enumerate(occurences.tolist())], reverse=True)
+                    if n_total_occ >= hconfig.min_total_occ:
+                        total_occurences = np.maximum(
+                            total_occurences, (occurences - 0.5) / (n_total_occ + 0.5)
+                        )
+    total_occurences = np.power(total_occurences, 4)
+
+    return [(v, i) for i, v in enumerate(total_occurences.tolist())]
 
 
 if __name__ == "__main__":
     original_word = "withered"
     print(f"original_word = {original_word}")
-    predictions = scrap_g("withe_ed")
+    hconfig = HConfig()
+    predictions = scrap_g(
+        "withe_ed",
+        hconfig,
+    )
     predictions = [c for _, c in predictions]
 
     if predictions is not None:

@@ -8,6 +8,7 @@ from game.play_game import play_game
 from nn.nn2b.hconfig import HConfig
 from nn.nn2b.selector import SelectorNN, append_to_file
 from nn.nn2b.validate import validate_predictions
+from nn.nn2b.vowels import check_vowels, rare_triads
 from .scrap import scrap_g
 from tqdm import tqdm
 
@@ -20,7 +21,7 @@ words_lost = []
 pass_filename = "pass.bin"
 train_phase = False
 
-selector_model_obj = SelectorNN(input_dim=12, hidden_dim=48, output_cardinality=6)
+selector_model_obj = SelectorNN(input_dim=13, hidden_dim=48, output_cardinality=6)
 selector_model_obj.load_state_dict(
     torch.load(
         "models/selector_nn.pth",
@@ -48,10 +49,14 @@ def load_pass_words():
         pass_words = pickle.load(f)
 
 
+rare_triads_set = rare_triads()
+
+
 def create_model_guesser(
     model,
     hconfig: HConfig,
     verbose=False,
+    small_words_model=None,
     surr: int = 3,
 ):
     """
@@ -77,13 +82,23 @@ def create_model_guesser(
         else:
             if verbose:
                 print(f"already guessed: {guess_fn.already_guessed}")
+            predict_output: list[tuple[float, int]] = []
+            if len(current_word) <= 5 and small_words_model is not None:
+                predict_output = predict(
+                    current_word,
+                    small_words_model,
+                    # already_guessed=guess_fn.already_guessed,
+                    verbose=verbose,
+                )
+            else:
+                predict_output = predict(
+                    current_word,
+                    model,
+                    # already_guessed=guess_fn.already_guessed,
+                    verbose=verbose,
+                    mult_factor=2.5,
+                )
 
-            predict_output: list[tuple[float, int]] = predict(
-                current_word,
-                model,
-                # already_guessed=guess_fn.already_guessed,
-                verbose=verbose,
-            )
             predict_output = [
                 (0, c) if c in guess_fn.already_guessed else (p, c)
                 for (p, c) in predict_output
@@ -93,6 +108,9 @@ def create_model_guesser(
                 (0, c) if c in guess_fn.already_guessed else (p, c)
                 for (p, c) in scrap_output
             ]
+
+            predict_output = sorted(predict_output, reverse=True)
+            scrap_output = sorted(scrap_output, reverse=True)
 
             predict_map = {v: k for k, v in predict_output}
             scrap_map = {v: k for k, v in scrap_output}
@@ -107,6 +125,7 @@ def create_model_guesser(
                             + [scrap_map[v[1]] for v in predict_output[:3]]
                             + [v[0] for v in scrap_output[:3]]
                             + [predict_map[v[1]] for v in scrap_output[:3]]
+                            + [len(current_word)]
                         )
 
                         replacements = [
@@ -125,7 +144,8 @@ def create_model_guesser(
                         [v[0] for v in predict_output[:3]]
                         + [scrap_map[v[1]] for v in predict_output[:3]]
                         + [v[0] for v in scrap_output[:3]]
-                        + [predict_map[v[1]] for v in scrap_output[:3]],
+                        + [predict_map[v[1]] for v in scrap_output[:3]]
+                        + [len(current_word)],
                         dtype=torch.float32,
                     )
                     targets = [v[1] for v in (predict_output[:3] + scrap_output[:3])]
@@ -136,10 +156,19 @@ def create_model_guesser(
                         ]
                     ]
 
-            # scrap_output = []
             sorted_predictions = selector_output + [
-                v[1] for v in sorted(scrap_output + predict_output, reverse=True)
+                v[1]
+                for v in sorted(
+                    predict_output[:1] + scrap_output + predict_output[1:], reverse=True
+                )
             ]
+
+            sorted_predictions = check_vowels(
+                current_word,
+                guess_fn.already_guessed,
+                rare_triads_set,
+                sorted_predictions,
+            )
             guess_fn.last_word = current_word
             guess_fn.cached_preds = sorted_predictions
 
@@ -161,8 +190,11 @@ def reset_guesser_state(guess_fn):
 def test_model_on_game_play(
     hconfig: HConfig,
     model_object=None,
+    small_words_model_object=None,
     test_words_file: str = "w_test.txt",
+    start_idx_word: int = 0,
     max_test_words: int | None = None,
+    small_words: bool = False,
     verbose=False,
 ) -> float:
     """
@@ -181,9 +213,11 @@ def test_model_on_game_play(
     with open(test_words_file, "r") as f:
         test_words = [w.strip() for w in f.readlines()]
 
+    if small_words:
+        test_words = [w for w in test_words if len(w) <= 5]
+
     if max_test_words and len(test_words) > max_test_words:
-        test_words = test_words[:max_test_words]
-        print(f"Testing on first {max_test_words} words for speed")
+        test_words = test_words[start_idx_word : start_idx_word + max_test_words]
 
     if verbose:
         print(f"Testing on {len(test_words)} words...")
@@ -199,6 +233,7 @@ def test_model_on_game_play(
             hconfig,
             test_word=word,
             model=model,
+            small_words_model=small_words_model_object,
             verbose=False,
         )
         model_results.append(result)
@@ -219,6 +254,7 @@ def model_single_game(
     hconfig: HConfig,
     model_filepath: str = "models/cb.pth",
     model=None,
+    small_words_model=None,
     test_word: str = "hangman",
     verbose=False,
 ) -> int:
@@ -235,20 +271,22 @@ def model_single_game(
     model_guesser = create_model_guesser(
         model,
         hconfig,
+        small_words_model=small_words_model,
         verbose=verbose,
     )
     reset_guesser_state(model_guesser)
     model_result = play_game(test_word, model_guesser, verbose=verbose)
-    # if model_result == 0:
-    #     words_lost.append(test_word)
+    if model_result == 0:
+        words_lost.append(test_word)
 
     # if model_result == 0 and test_word not in pass_words:
-    # pass_words.append(test_word)
-    # print(f"Failed on word: {test_word}. Total failed words: {len(words_lost)}")
-    # play = input("play?")
+    #     pass_words.append(test_word)
+    # print(f"Failed on word: {test_word}. Total failed words: {len(words_lost)}") play = input("play?")
     # if play == "j":
     #     model_guesser = create_model_guesser(
     #         model,
+    #         hconfig,
+    #         small_words_model=small_words_model,
     #         verbose=True,
     #     )
     #     play_game(test_word, model_guesser, verbose=True)
@@ -267,14 +305,43 @@ if __name__ == "__main__":
     model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
     model = torch.compile(model, mode="max-autotune")
     hconfig = HConfig(
-        selector_prefix_len=1, min_non_blanks=7, max_blanks=3, span_start=6
+        selector_prefix_len=1, min_non_blanks=5, max_blanks=3, span_start=6
     )
 
-    model_filepath = "models/nn2b.pth_checkpoint_2"
+    model_filepath = "models/nn2b.pth_checkpoint_58"
     model.load_state_dict(
         torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
     )
-    # res = model_single_game(hconfig, model=model, test_word="internship", verbose=True)
-    # print(res)
+    model.eval()
 
-    test_model_on_game_play(HConfig(), model_object=model, verbose=True)
+    # res = model_single_game(hconfig, model=model, test_word="spissitudj", verbose=True)
+    # print(res)
+    # res1 = []
+    # res2 = []
+    #
+    # for _ in range(5):
+    #     s_res = test_model_on_game_play(
+    #         hconfig,
+    #         model_object=model,
+    #         small_words_model_object=None,
+    #         verbose=True,
+    #         max_test_words=30,
+    #     )
+    #     e_res = test_model_on_game_play(
+    #         hconfig,
+    #         model_object=model,
+    #         small_words_model_object=small_words_model,
+    #         verbose=True,
+    #         max_test_words=30,
+    #         start_idx_word=400,
+    #     )
+    #     res1.append(s_res)
+    #     res2.append(e_res)
+    # print(res1)
+    # print(res2)
+    s_res = test_model_on_game_play(
+        hconfig,
+        model_object=model,
+        small_words_model_object=None,
+        verbose=True,
+    )

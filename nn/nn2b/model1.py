@@ -85,6 +85,7 @@ class HangmanNet(BaseHangmanModel):
 
     def predict_numpy(self, x):
         # the caller should call torch.no_grad() and model.eval()
+
         x = x.to(self.device)
         if x.dim() == 1:  # Add batch dimension if needed
             x = x.unsqueeze(0)
