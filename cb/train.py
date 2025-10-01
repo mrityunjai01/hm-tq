@@ -8,9 +8,9 @@ from skops.io import dump
 def train(
     x: NDArray[np.float32],
     y: NDArray[np.float32],
-    model_filepath: str = "models/cb.pth",
+    model_filepath: str | None = "models/cb.pth",
     **kwargs,  # pyright: ignore[reportUnknownParameterType, reportMissingParameterType]
-) -> None:
+) -> None | MultiOutputClassifier:
     cb = MultiOutputClassifier(
         CatBoostClassifier(
             iterations=20,
@@ -22,4 +22,7 @@ def train(
         )
     )
     cb: MultiOutputClassifier = cb.fit(x, y)  # pyright: ignore[reportUnknownMemberType]
-    dump(cb, model_filepath)
+    if model_filepath is not None:
+        dump(cb, model_filepath)
+    else:
+        return cb
