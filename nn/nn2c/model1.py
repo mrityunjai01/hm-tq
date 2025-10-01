@@ -30,20 +30,17 @@ class MultiHeadAttentionWithRoPE(nn.Module):
         )
 
     def forward(self, x, mask=None):
-        batch_size, seq_len, _ = x.shape
+        _, seq_len, _ = x.shape
 
-        if mask is None:
-            eye_matrix = torch.eye(
-                seq_len,
-                device=x.device,
-                dtype=torch.bool,
-            )
-            diagonal_mask = torch.zeros(
-                (seq_len, seq_len), device=x.device, dtype=torch.float32
-            )
-            diagonal_mask = diagonal_mask.masked_fill(eye_matrix, float("-inf"))
-        else:
-            diagonal_mask = mask
+        eye_matrix = torch.eye(
+            seq_len,
+            device=x.device,
+            dtype=torch.bool,
+        )
+        diagonal_mask = torch.zeros(
+            (seq_len, seq_len), device=x.device, dtype=torch.float32
+        )
+        diagonal_mask = diagonal_mask.masked_fill(eye_matrix, float("-inf"))
 
         qkv = self.qkv_proj(x)
         q, k, v = torch.chunk(qkv, 3, dim=-1)
@@ -121,7 +118,7 @@ class HangmanNet(nn.Module):
     def __init__(
         self,
         vocab_size=27,  # a-z + '{'
-        hidden_dim=512,
+        hidden_dim=256,
         num_heads=8,
         num_layers=4,
         dropout_rate=0.3,
@@ -175,6 +172,14 @@ class HangmanNet(nn.Module):
             x = x.unsqueeze(0)
         logits = self(x)
         return F.softmax(logits, dim=-1).cpu().detach().numpy()
+
+    def _init_weights(self):
+        """Initialize weights using Xavier/Glorot initialization."""
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
 
 def count_parameters(model):
