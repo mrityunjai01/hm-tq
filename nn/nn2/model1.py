@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .base_model import BaseHangmanModel
 
-class HangmanNet(nn.Module):
+
+class HangmanNet(BaseHangmanModel):
     """
     Neural network for hangman letter prediction.
 
@@ -41,23 +43,6 @@ class HangmanNet(nn.Module):
         self._init_weights()
 
         self.device = device
-
-    def _init_weights(self):
-        """Initialize weights using Xavier/Glorot initialization."""
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-
-    def reset_last_embedding(self):
-        """ensure the last embedding is always the same"""
-        mask = torch.ones(
-            (self.embed_layer.weight.shape[0], self.embed_layer.weight.shape[0])
-        )
-        mask[:, -1] = 0
-        mask /= mask.sum(dim=1, keepdim=True)
-        self.embed_layer.weight.data = torch.matmul(mask, self.embed_layer.weight)
 
     def forward(self, x):
         """
