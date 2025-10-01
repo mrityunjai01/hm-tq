@@ -45,6 +45,7 @@ def train(
     scheduler_type="cosine",
     num_layers=4,
     hidden_dim=512,
+    num_epochs=None,
 ):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -52,6 +53,10 @@ def train(
     # Use passed batch_size or default from STAGE config
     if batch_size is None:
         batch_size = 64 if STAGE else 64
+
+    # Use passed num_epochs or default from STAGE config
+    if num_epochs is None:
+        num_epochs = 200 if STAGE else 80
 
     model = HangmanNet(
         vocab_size=27, device=device, num_layers=num_layers, hidden_dim=hidden_dim
@@ -182,6 +187,12 @@ def main():
         help="Hidden dimension size (default: 512)",
     )
     parser.add_argument(
+        "--num-epochs",
+        type=int,
+        default=None,
+        help="Number of training epochs (default: 200 for STAGE, 80 for production)",
+    )
+    parser.add_argument(
         "--model-path",
         type=str,
         default="models/nn2c.pth",
@@ -198,6 +209,7 @@ def main():
         scheduler_type=args.scheduler,
         num_layers=args.num_layers,
         hidden_dim=args.hidden_dim,
+        num_epochs=args.num_epochs,
     )
 
 
