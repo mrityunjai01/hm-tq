@@ -1,11 +1,10 @@
 import os
 
 import numpy as np
-from numpy.typing import NDArray
 from skops.io import load  # pyright: ignore[reportMissingTypeStubs]
 
 from game.play_game import play_game
-from nn.nn2.gen_functions import gen_x
+from nn.nn2a.predict import predict
 
 
 def create_model_guesser(model, verbose=False, surr: int = 3):
@@ -23,22 +22,15 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
     def guess_fn(current_word: str) -> str:
         if not hasattr(guess_fn, "already_guessed"):
             guess_fn.already_guessed = set()  # pyright: ignore[reportFunctionMemberAccess]
-        l = gen_x(current_word, surr)
-
-        raw_predictions: NDArray[np.float32] = model.predict_numpy(
-            gen_x(current_word, surr)
-        )
-
-        predictions = 1 - (1 - raw_predictions).prod(axis=0)
-
-        sorted_predictions = sorted(
-            [(pred, idx) for idx, pred in enumerate(predictions)]
-        )[::-1]
 
         if verbose:
             print(f"already guessed: {guess_fn.already_guessed}")
 
-        for _, idx in sorted_predictions:
+        sorted_predictions: list[int] = predict(
+            current_word, model, surr=surr, already_guessed=guess_fn.already_guessed
+        )
+
+        for idx in sorted_predictions:
             if idx not in guess_fn.already_guessed:
                 guess_fn.already_guessed.add(idx)
                 return chr(idx + ord("a"))
@@ -54,7 +46,6 @@ def reset_guesser_state(guess_fn):
 
 
 def test_model_on_game_play(
-    model_filepath: str | None = "models/cb.pth",
     model_object=None,
     surr: int = 3,
     test_words_file: str = "w_test.txt",
@@ -89,11 +80,6 @@ def test_model_on_game_play(
 
     if model_object is not None:
         model = model_object
-    elif model_filepath is not None:
-        if not os.path.exists(model_filepath):
-            print(f"Model not found at {model_filepath}. Please train first.")
-            raise FileNotFoundError(f"Model not found at {model_filepath}")
-        model = load(model_filepath, trusted=["catboost.core.CatBoostClassifier"])
     else:
         raise ValueError("Either model_filepath or model_object must be provided.")
     model_results: list[int] = []
