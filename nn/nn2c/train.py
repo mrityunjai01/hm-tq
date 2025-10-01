@@ -15,6 +15,7 @@ from .early_stopping import EarlyStopping
 
 surr = 4
 if STAGE:
+    batch_size = 64
     small_data = True
     num_epochs = 200
     val_epoch_interval = 1
@@ -25,6 +26,7 @@ if STAGE:
     use_early_stopping = True
     test_word_count = 100
 else:
+    batch_size = 2000
     small_data = False
     num_epochs = 80
     val_epoch_interval = 1
@@ -62,7 +64,7 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False):
     for epoch in tqdm.trange(num_epochs, disable=not verbose):
         total_loss = 0.0
         for x, mask, y in TrainBatchGenerator(
-            batch_size=64,
+            batch_size=batch_size,
             small_data=small_data,
             words_file="hangman_data/train_words.txt",
         ):
@@ -77,8 +79,8 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False):
             else:
                 outputs = model(x)
                 loss = criterion(outputs[mask], y[mask])
-                if math.isnan(loss.item()):
-                    breakpoint()
+                # if math.isnan(loss.item()):
+                #     breakpoint()
                 loss.backward()
 
             if GPU:
