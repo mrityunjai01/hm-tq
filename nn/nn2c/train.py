@@ -72,7 +72,7 @@ def train(
 
     # Configure scheduler based on type
     if scheduler_type == "cosine":
-        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 5)
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 6)
     elif scheduler_type == "step":
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
     elif scheduler_type == "exponential":

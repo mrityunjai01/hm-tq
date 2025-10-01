@@ -23,7 +23,7 @@ class TrainBatchGenerator:
         with open(words_file, "r") as f:
             words = [line.strip() for line in f.readlines()]
             if small_data:
-                words = words[:20000]
+                words = words[:200]
             self.words_by_size = {}
             for word in words:
                 if len(word) < 3:
