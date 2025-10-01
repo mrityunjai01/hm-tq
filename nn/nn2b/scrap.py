@@ -2,23 +2,24 @@ import regex as re
 import numpy as np
 
 
-def load_words():
+def load_word_dictionary():
     with open("w_train.txt", "r") as f:
-        return [line.strip() for line in f.readlines()]
+        return "4".join([line.strip() for line in f.readlines()])
 
 
-words = load_words()
+word_dictionary = load_word_dictionary()
 
 
 def scrap_g(word):
-    span = 6
+    if (word.count("_") >= len(word) - 4) and (word.count("_") >= 2):
+        return []
+
+    span = 5
     blank_positions = [i for i in range(len(word)) if word[i] == "_"]
-    word = word.replace("_", ".")
-    # breakpoint()
 
     word_len = len(word)
     n_total_occ = 0
-    occurences = np.zeros(26, dtype=np.float32)
+    occurences = np.zeros(26, dtype=np.int32)
     for pos in blank_positions:
         if word_len < span:
             break
@@ -26,21 +27,27 @@ def scrap_g(word):
             end = start + span
             if start <= pos < end:
                 pattern = word[start:end]
-                for w in words:
-                    for match in re.finditer(pattern, w):
-                        letter = w[match.start() + (pos - start)]
-                        letter_idx = ord(letter) - ord("a")
-                        occurences[letter_idx] += 1
-                        n_total_occ += 1
-    if n_total_occ < 3:
-        return None
-    return np.argsort(occurences).tolist()[::-1]
+                pattern = pattern.replace("_", "[a-z]")
+
+                for match in re.finditer(pattern, word_dictionary):
+                    letter = word_dictionary[match.start() + pos - start]
+                    letter_idx = ord(letter) - ord("a")
+                    if letter_idx < 0:
+                        breakpoint()
+                    occurences[letter_idx] += 1
+                    n_total_occ += 1
+    if n_total_occ < 2:
+        return []
+    occurences = occurences.astype(np.float32)
+    occurences /= n_total_occ
+    return sorted([(v, i) for i, v in enumerate(occurences.tolist())], reverse=True)
 
 
 if __name__ == "__main__":
     original_word = "withered"
     print(f"original_word = {original_word}")
     predictions = scrap_g("withe_ed")
+    predictions = [c for _, c in predictions]
 
     if predictions is not None:
         predictions_converted_to_char = [chr(c + ord("a")) for c in predictions]

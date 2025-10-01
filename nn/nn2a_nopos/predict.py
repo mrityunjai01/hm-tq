@@ -1,8 +1,9 @@
 from numpy.typing import NDArray
 
-from .base_model import char_freq_values
-from .gen_functions import unknown_row, onehot
 import numpy as np
+
+from nn.nn2a_nopos.gen_functions import onehot
+from .base_model import char_freq
 
 initial_eq_sweeps = 2
 eq_k = 3
@@ -47,12 +48,11 @@ def predict(
     model,
     surr: int,
     already_guessed: set[int],
-    k: int = 3,
-) -> list[int]:
+) -> list[tuple[float, int]]:
     """I will use model to predict a char from 'a' to 'z' for each '_'"""
     n_known_chars = set([ch for ch in word if ch != "_"])
     if len(n_known_chars) < 3:
-        return [ord(c) - ord("a") for c in char_freq_values if c not in already_guessed]
+        return [(100.0 - i, ord(c) - ord("a")) for i, c in enumerate(char_freq)]
 
     padded_word = "{" * surr + word + "{" * surr
     blank_positions = [i for i, char in enumerate(padded_word) if char == "_"]
@@ -79,7 +79,7 @@ def predict(
                 encoded_word, model, pos, surr, already_guessed, eq_sweeps=False
             )
     at_least_one_pred = 1 - (1 - encoded_word[blank_positions]).prod(axis=0)
-    return np.argsort(at_least_one_pred).tolist()[::-1]
+    return at_least_one_pred
 
 
 def beam_search_predict(word, model, surr, k):

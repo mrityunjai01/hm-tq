@@ -5,7 +5,6 @@ import numpy as np
 import torch
 
 from game.play_game import play_game
-from .scrap import scrap_g
 from tqdm import tqdm
 
 from .model1 import HangmanNet
@@ -15,6 +14,7 @@ pass_words = []
 words_lost = []
 
 pass_filename = "pass.bin"
+surr = 4
 
 
 def save_pass_words():
@@ -55,15 +55,10 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
             predict_output: list[tuple[float, int]] = predict(
                 current_word,
                 model,
-                # already_guessed=guess_fn.already_guessed,
-                verbose=verbose,
-                mult_factor=1.5,
+                surr=surr,
+                already_guessed=guess_fn.already_guessed,
             )
-            # scrap_output = scrap_g(current_word)
-            scrap_output = []
-            sorted_predictions = [
-                v for _, v in sorted(scrap_output + predict_output, reverse=True)
-            ]
+            sorted_predictions = [v for _, v in sorted(predict_output, reverse=True)]
             guess_fn.last_word = current_word
             guess_fn.cached_preds = sorted_predictions
 
@@ -184,10 +179,11 @@ def model_single_game(
 
 if __name__ == "__main__":
     device = "cpu"
-    model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
-    model = torch.compile(model, mode="max-autotune")
+    model = HangmanNet(
+        input_dim=2 * surr, vocab_size=27, target_vocab_size=26, device=device
+    ).to(device)
 
-    model_filepath = "models/nn2b.pth_checkpoint_2"
+    model_filepath = "models/trained_nn2a_out"
     model.load_state_dict(
         torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
     )

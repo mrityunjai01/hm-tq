@@ -51,10 +51,10 @@ def play_game(
     game_state = GameState()
     current_word = "".join(["_"] * len(actual_word))
 
-    scrap_next = False
-
     while not game_state.is_game_over():
-        guessed_letter = guess_fn(current_word, scrap=scrap_next)
+        guessed_letter = guess_fn(
+            current_word,
+        )
 
         if verbose:
             print(f"{current_word}\n{guessed_letter}")
@@ -76,11 +76,8 @@ def play_game(
             # Check if word is complete
             if current_word == actual_word:
                 return 1
-            scrap_next = False
         else:
             game_state.add_mistake()
-            if current_word.count("_") <= 2:
-                scrap_next = True
 
     return 0
 
