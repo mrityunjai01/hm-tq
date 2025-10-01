@@ -36,10 +36,8 @@ def predict(
     x = torch.tensor(char_indices, dtype=torch.int32)
     predictions = model.predict_numpy(x).squeeze()
 
-    # at_least_one_pred = predictions[blank_positions].max(axis=0)
-    at_least_one_pred = (
-        1 - (1 - predictions[blank_positions]).prod(axis=0) * mult_factor
-    )
+    # at_least_one_pred = predictions[blank_positions].max(axis=0) * mult_factor
+    at_least_one_pred = 1 - (1 - predictions[blank_positions]).prod(axis=0)
 
     # at_least_one_pred = predictions[blank_positions].mean(axis=0)
     return sorted(
