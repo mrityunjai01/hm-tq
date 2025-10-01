@@ -5,9 +5,11 @@ import numpy as np
 import torch
 
 from game.play_game import play_game
+from .scrap import scrap_g
+from tqdm import tqdm
 
 from .model1 import HangmanNet
-from .predict import predict
+from .predict import beam_search_predict, predict
 
 pass_words = []
 words_lost = []
@@ -38,14 +40,43 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
         Guess function for use with play_game
     """
 
-    def guess_fn(current_word: str) -> str:
+    def guess_fn(current_word: str, scrap=False) -> str:
         if not hasattr(guess_fn, "already_guessed"):
             guess_fn.already_guessed = set()  # pyright: ignore[reportFunctionMemberAccess]
+            guess_fn.last_word = ""
+            guess_fn.last_scrap = False
+            guess_fn.cached_preds = None
 
-        if verbose:
-            print(f"already guessed: {guess_fn.already_guessed}")
+        if (
+            (current_word == guess_fn.last_word)
+            and (guess_fn.cached_preds is not None)
+            and ((scrap and guess_fn.last_scrap) or (not scrap))
+        ):
+            sorted_predictions = guess_fn.cached_preds
+        else:
+            if verbose:
+                print(f"already guessed: {guess_fn.already_guessed}")
 
-        sorted_predictions: list[int] = predict(current_word, model, verbose=verbose)
+            if scrap:
+                sorted_predictions = scrap_g(current_word)
+                if sorted_predictions is None:
+                    sorted_predictions = predict(
+                        current_word,
+                        model,
+                        # already_guessed=guess_fn.already_guessed,
+                        verbose=verbose,
+                    )
+                guess_fn.last_scrap = True
+            else:
+                sorted_predictions: list[int] = predict(
+                    current_word,
+                    model,
+                    # already_guessed=guess_fn.already_guessed,
+                    verbose=verbose,
+                )
+                guess_fn.last_scrap = False
+            guess_fn.last_word = current_word
+            guess_fn.cached_preds = sorted_predictions
 
         for idx in sorted_predictions:
             if idx not in guess_fn.already_guessed:
@@ -77,9 +108,6 @@ def test_model_on_game_play(
         max_test_words: Maximum number of words to test (for speed)
     """
 
-    if verbose:
-        print("=== CatBoost Model Game Play Evaluation ===")
-
     if not os.path.exists(test_words_file):
         print(f"Test words file {test_words_file} not found.")
         raise FileNotFoundError(f"Test words file {test_words_file} not found.")
@@ -100,7 +128,7 @@ def test_model_on_game_play(
         raise ValueError("Either model_filepath or model_object must be provided.")
     model_results: list[int] = []
 
-    for i, word in enumerate(test_words):
+    for i, word in tqdm(enumerate(test_words)):
         result = model_single_game(
             test_word=word,
             model=model,
@@ -108,7 +136,7 @@ def test_model_on_game_play(
         )
         model_results.append(result)
         if verbose:
-            if (i + 1) % 100 == 0:
+            if (i + 1) % 500 == 0:
                 print(f"Played {i + 1}/{len(test_words)} games")
 
     model_win_rate = float(np.mean(model_results))
@@ -168,7 +196,7 @@ if __name__ == "__main__":
     model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
     model = torch.compile(model, mode="max-autotune")
 
-    model_filepath = "models/nn2b_gc_56.pth_checkpoint_56"
+    model_filepath = "models/nn2b.pth_checkpoint_2"
     model.load_state_dict(
         torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
     )
