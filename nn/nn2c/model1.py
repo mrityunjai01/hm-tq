@@ -14,7 +14,6 @@ class MultiHeadAttentionWithRoPE(nn.Module):
         self.num_heads = num_heads
         self.d_k = d_model // num_heads
 
-        # Single projection for Q, K, V
         self.qkv_proj = nn.Linear(d_model, 3 * d_model, bias=False)
         self.out_proj = nn.Linear(d_model, d_model)
         self.multihead_attn = nn.MultiheadAttention(
@@ -87,7 +86,6 @@ class TransformerEncoderLayerWithRoPE(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
-        # Pre-norm (norm_first=True)
         self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.dropout1 = nn.Dropout(dropout)
@@ -99,7 +97,6 @@ class TransformerEncoderLayerWithRoPE(nn.Module):
         src2 = self.self_attn(src2, src_mask)
         src = src + self.dropout1(src2)
 
-        # Pre-norm: normalize before feed forward
         src2 = self.norm2(src)
         src2 = self.linear2(self.dropout(F.gelu(self.linear1(src2))))
         src = src + self.dropout2(src2)
@@ -132,7 +129,6 @@ class HangmanNet(nn.Module):
 
         self.char_embedding = nn.Embedding(vocab_size, hidden_dim)
 
-        # Custom transformer layers with RoPE
         self.layers = nn.ModuleList(
             [
                 TransformerEncoderLayerWithRoPE(
@@ -146,9 +142,8 @@ class HangmanNet(nn.Module):
             ]
         )
 
-        self.output_projection = nn.Linear(hidden_dim, 26)  # Only predict a-z (not '{')
+        self.output_projection = nn.Linear(hidden_dim, 26)
 
-        # constants
         self.hidden_dim = hidden_dim
         self.device = device
 
@@ -156,7 +151,6 @@ class HangmanNet(nn.Module):
         batch_size, seq_len = x.shape
         x = self.char_embedding(x)
 
-        # Pass through transformer layers with RoPE
         for layer in self.layers:
             x = layer(x)
 

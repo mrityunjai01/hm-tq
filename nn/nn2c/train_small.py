@@ -58,7 +58,6 @@ def train(model_path="models/small_nn2b.pth", device=None, verbose=False):
     )
     history = History()
     best_val_metric = -1
-    # Initialize early stopping
     early_stopping = None
     if use_early_stopping:
         early_stopping = EarlyStopping(
@@ -108,7 +107,6 @@ def train(model_path="models/small_nn2b.pth", device=None, verbose=False):
                 history.add_epoch(val_metric=winrate)
                 history.print_metrics()
 
-                # Check early stopping
                 if early_stopping and early_stopping(winrate, model):
                     if verbose:
                         print(f"Early stopping at epoch {epoch + 1}")

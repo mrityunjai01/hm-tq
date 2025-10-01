@@ -104,17 +104,15 @@ def test_model_on_game_play(
     else:
         raise ValueError("Either model_filepath or model_object must be provided.")
 
-    # Use parallel processing if we have at least 100 words
     if len(test_words) >= 100:
         if verbose:
             print(f"Using {num_threads} threads for parallel testing")
 
-        # Split words into batches for each thread
         batch_size = len(test_words) // num_threads
         word_batches = []
         for i in range(num_threads):
             start_idx = i * batch_size
-            if i == num_threads - 1:  # Last batch gets remaining words
+            if i == num_threads - 1:
                 end_idx = len(test_words)
             else:
                 end_idx = (i + 1) * batch_size
@@ -122,15 +120,13 @@ def test_model_on_game_play(
 
         model_results: list[int] = []
 
-        # Use ThreadPoolExecutor for parallel processing
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            # Submit all batches
             future_to_batch = {
                 executor.submit(test_words_batch, batch, model, i): i
-                for i, batch in enumerate(word_batches) if batch  # Only submit non-empty batches
+                for i, batch in enumerate(word_batches)
+                if batch
             }
 
-            # Collect results as they complete
             completed_batches = 0
             for future in as_completed(future_to_batch):
                 batch_results = future.result()
@@ -139,11 +135,12 @@ def test_model_on_game_play(
 
                 if verbose:
                     total_completed = len(model_results)
-                    print(f"Completed batch {completed_batches}/{len(future_to_batch)}, "
-                          f"total games: {total_completed}/{len(test_words)}")
+                    print(
+                        f"Completed batch {completed_batches}/{len(future_to_batch)}, "
+                        f"total games: {total_completed}/{len(test_words)}"
+                    )
 
     else:
-        # Sequential processing for small datasets
         if verbose:
             print("Using sequential processing (< 100 words)")
 

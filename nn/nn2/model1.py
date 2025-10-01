@@ -39,7 +39,7 @@ class HangmanNet(BaseHangmanModel):
         self.bn2 = nn.BatchNorm1d(hidden_dim2)
         self.dropout2 = nn.Dropout(dropout_rate)
 
-        self.layer3 = nn.Linear(hidden_dim2, 26)  # Output 26 letters
+        self.layer3 = nn.Linear(hidden_dim2, 26)
         self._init_weights()
 
         self.device = device
@@ -56,12 +56,11 @@ class HangmanNet(BaseHangmanModel):
         """
         x = self.embed_layer(x)
         x = self.layer1(x)
-        x = x.view(x.size(0), -1)  # Flatten for batch norm
+        x = x.view(x.size(0), -1)
         x = self.bn1(x)
         x = F.relu(x)
         x = self.dropout1(x)
 
-        # Layer 2
         x = self.layer2(x)
         x = self.bn2(x)
         x = F.relu(x)

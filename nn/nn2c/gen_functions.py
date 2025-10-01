@@ -15,12 +15,10 @@ def gen_x_y_for_word(
     """
     import random
 
-    # Get unique characters in word
     unique_chars = list(set(word))
 
     sorted_chars = sorted(unique_chars, key=sort_key)
 
-    # Randomly select at most 3 character types to mask
     max_num_to_mask = min(6, random.randint(1, len(unique_chars)))
     exp_num_to_mask = min(3, random.randint(1, len(unique_chars)))
     chars_to_mask = []

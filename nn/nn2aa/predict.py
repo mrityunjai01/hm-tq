@@ -26,7 +26,7 @@ def spot_predict(
     position_fraction = (pos - surr) / original_word_len
     position_encoding = min(7, int(position_fraction * 8))
 
-    x_surrounding = np.expand_dims(surrounding, axis=0)  # Add batch dimension
+    x_surrounding = np.expand_dims(surrounding, axis=0)
     x_position = np.array([position_encoding], dtype=np.int32)
 
     predictions = model.predict_numpy(
@@ -36,13 +36,12 @@ def spot_predict(
     predictions = np.append(predictions, 0)
     assert predictions.shape[0] == target_vocab_size
     for idx in already_guessed:
-        predictions[idx] = 0.0  # Zero out already guessed characters
+        predictions[idx] = 0.0
     if eq_sweeps:
-        # set top 3 to equal probability
         top_k_indices = np.argsort(predictions)[-eq_k:]
         predictions[top_k_indices] = np.max(predictions)
 
-    predictions /= predictions.sum()  # Re-normalize to sum to 1
+    predictions /= predictions.sum()
 
     encoded_word[pos] = predictions
 
@@ -117,7 +116,7 @@ def beam_search_predict(word, model, surr, k):
             position_fraction = (pos - surr) / original_word_len
             position_encoding = min(7, int(position_fraction * 8))
 
-            x_surrounding = np.expand_dims(x_surrounding, axis=0)  # Add batch dimension
+            x_surrounding = np.expand_dims(x_surrounding, axis=0)
             x_position = np.array([position_encoding], dtype=np.float32)
 
             predictions = model.predict_numpy((x_surrounding, x_position), verbose=0)
@@ -140,7 +139,6 @@ def beam_search_predict(word, model, surr, k):
         new_beam.sort(key=lambda x: x[0], reverse=True)
         beam = new_beam[:k]
 
-    # Remove padding and return top predictions
     results = []
     for score, hypothesis in beam:
         unpadded = hypothesis[surr:-surr]

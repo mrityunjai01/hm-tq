@@ -50,11 +50,9 @@ def train(
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Use passed batch_size or default from STAGE config
     if batch_size is None:
         batch_size = 64 if STAGE else 64
 
-    # Use passed num_epochs or default from STAGE config
     if num_epochs is None:
         num_epochs = 200 if STAGE else 80
 
@@ -70,7 +68,6 @@ def train(
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.AdamW(model.parameters(), lr=initial_lr, eps=5e-5)
 
-    # Configure scheduler based on type
     if scheduler_type == "cosine":
         scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 6)
     elif scheduler_type == "step":
@@ -85,7 +82,6 @@ def train(
         raise ValueError(f"Unknown scheduler type: {scheduler_type}")
     history = History()
     best_val_metric = -1
-    # Initialize early stopping
     early_stopping = None
     if use_early_stopping:
         early_stopping = EarlyStopping(
@@ -121,7 +117,6 @@ def train(
             else:
                 optimizer.step()
 
-            # Only step non-plateau schedulers here
             if scheduler_type != "plateau":
                 scheduler.step()
             total_loss += loss.item()
@@ -143,11 +138,9 @@ def train(
                 history.add_epoch(val_metric=winrate)
                 history.print_metrics()
 
-                # Step plateau scheduler with validation metric
                 # if scheduler_type == "plateau":
                 #     scheduler.step(winrate)
 
-                # Check early stopping
                 if early_stopping and early_stopping(winrate, model):
                     if verbose:
                         print(f"Early stopping at epoch {epoch + 1}")

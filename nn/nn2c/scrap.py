@@ -18,7 +18,6 @@ def scrap_g(word, hconfig: HConfig):
     ):
         return []
 
-    # spans = [hconfig.span_start, hconfig.span_start + 1]
     spans = [3, 5, 6]
     blank_positions = [i for i in range(len(word)) if word[i] == "_"]
 

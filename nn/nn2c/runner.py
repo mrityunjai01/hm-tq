@@ -310,17 +310,22 @@ def model_single_game(
 
 if __name__ == "__main__":
     device = "cpu"
-    model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
+    model = HangmanNet(
+        vocab_size=27,
+        hidden_dim=768,
+        num_layers=5,
+        device=device,
+    ).to(device)
     model = torch.compile(model, mode="max-autotune")
     hconfig = HConfig(
-        selector_prefix_len=1, min_non_blanks=5, max_blanks=3, span_start=6
+        selector_prefix_len=1, min_non_blanks=20, max_blanks=3, span_start=6
     )
 
-    model_filepath = "models/nn2b.pth_checkpoint_58"
+    model_filepath = "models/nn2c.pth_checkpoint_67"
     model.load_state_dict(
         torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
     )
-    model.eval()
+    model = model.eval()
 
     # res = model_single_game(hconfig, model=model, test_word="spissitudj", verbose=True)
     # print(res)
@@ -350,9 +355,8 @@ if __name__ == "__main__":
     s_res = test_model_on_game_play(
         hconfig,
         model_object=model,
-        use_scrap=True,
+        use_scrap=False,
         small_words_model_object=None,
         verbose=True,
         test_words_file="hangman_data/test_words.txt",
-        max_test_words=500,
     )

@@ -11,12 +11,10 @@ from .tst import test_model_on_game_play
 
 def test_valid_shapes():
     for x, y in TrainBatchGenerator(batch_size=64):
-        # Assert batch dimensions match
         assert x[0].shape[0] == y.shape[0], (
             f"Batch dimensions don't match: x={x[0].shape[0]}, y={y.shape[0]}"
         )
 
-        # Assert feature dimensions are correct
         assert x[0].shape[1] == 2 * surr, (
             f"x second dimension should be 34, got {x[0].shape[1]}"
         )

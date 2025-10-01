@@ -9,7 +9,6 @@ from torch import autocast
 from torch.amp.grad_scaler import GradScaler
 
 from .data_loader import TrainBatchGenerator
-from .history import History
 from .model1 import HangmanNet, count_parameters
 from .tst import test_model_on_game_play
 from .early_stopping import EarlyStopping
@@ -70,7 +69,6 @@ def train_single_trial(
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, eps=5e-5)
 
-    # Configure scheduler based on type
     if scheduler_type == "cosine":
         scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, 6)
     elif scheduler_type == "step":
@@ -83,7 +81,6 @@ def train_single_trial(
         )
     else:
         raise ValueError(f"Unknown scheduler type: {scheduler_type}")
-    history = History()
     best_val_metric = -1
 
     for epoch in tqdm.trange(trial_epochs, disable=not verbose):
@@ -116,25 +113,21 @@ def train_single_trial(
             else:
                 optimizer.step()
 
-            # Only step non-plateau schedulers here
             if scheduler_type != "plateau":
                 scheduler.step()
             total_loss += loss.item()
 
-        history.add_epoch(train_loss=total_loss)
         if verbose:
             print(f"Trained epoch {epoch + 1}, Train Loss: {total_loss:.4f}")
 
-    # Final validation
     model.eval()
     with torch.no_grad():
         final_winrate = test_model_on_game_play(
             test_words_file="hangman_data/test_words.txt",
             model_object=model,
-            max_test_words=1000,  # Smaller test set for faster trials
+            max_test_words=1000,
             verbose=False,
         )
-        history.add_epoch(val_metric=final_winrate)
 
     return final_winrate
 
@@ -164,7 +157,7 @@ def objective(trial):
         return final_winrate
     except Exception as e:
         print(f"Trial failed with error: {e}")
-        return 0.0  # Return poor score for failed trials
+        return 0.0
 
 
 def main():
@@ -201,17 +194,14 @@ def main():
         f"Starting Bayesian optimization with {args.n_trials} trials using {args.n_jobs} parallel jobs"
     )
 
-    # Optimize with parallel execution
     study.optimize(
         objective, n_trials=args.n_trials, n_jobs=args.n_jobs, show_progress_bar=True
     )
 
-    # Print results
     print("\n=== Optimization Results ===")
     print(f"Best trial value: {study.best_value:.4f}")
     print(f"Best hyperparameters: {study.best_params}")
 
-    # Save results
     best_params_file = f"best_params_{args.study_name}.txt"
     with open(best_params_file, "w") as f:
         f.write(f"Best validation winrate: {study.best_value:.4f}\n")
@@ -221,7 +211,6 @@ def main():
 
     print(f"Best parameters saved to {best_params_file}")
 
-    # Optionally show importance of hyperparameters
     try:
         importance = optuna.importance.get_param_importances(study)
         print("\nHyperparameter importance:")

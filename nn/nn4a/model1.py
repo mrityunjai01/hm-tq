@@ -76,11 +76,9 @@ class HangmanNet(nn.Module):
         """
         surroundings, positions = x
 
-        # Get embeddings for surroundings and positions
         surr_embed = self.embed_layer(surroundings)  # (batch_size, 34, embed_dim)
         pos_embed = self.pos_embed_layer(positions)  # (batch_size, embed_dim)
 
-        # Concatenate positional embedding to surroundings
         pos_embed_expanded = pos_embed.unsqueeze(1)  # (batch_size, 1, embed_dim)
         combined_embed = torch.cat(
             [surr_embed, pos_embed_expanded], dim=1
@@ -92,7 +90,6 @@ class HangmanNet(nn.Module):
         x = F.relu(x)
         x = self.dropout1(x)
 
-        # Layer 2
         x = self.layer2(x)
         x = self.bn2(x)
         x = F.relu(x)

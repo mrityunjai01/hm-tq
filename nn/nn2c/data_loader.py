@@ -14,7 +14,7 @@ class TrainBatchGenerator:
         pos_embed_size=4,
         small_data=False,
         small_words=False,
-        cache_size=10,  # Number of batches to cache
+        cache_size=10,
     ):
         self.batch_size = batch_size
         self.pos_embed_size = pos_embed_size
@@ -47,7 +47,6 @@ class TrainBatchGenerator:
         )
         self.finished = False
 
-        # Start the producer thread
         self.producer_thread.start()
 
     def _batch_producer(self):
@@ -57,15 +56,12 @@ class TrainBatchGenerator:
 
         while not self.stop_event.is_set():
             try:
-                # Check if queue is full before generating batch
                 if self.batch_queue.full():
-                    time.sleep(0.01)  # Wait a bit if queue is full
+                    time.sleep(0.01)
                     continue
 
-                # Check if we've exhausted current length
                 if curr_idx >= len(self.words_by_size[curr_len]):
                     if curr_len >= self.max_len:
-                        # Signal end of data
                         self.batch_queue.put(None, timeout=1.0)
                         self.finished = True
                         break
@@ -82,7 +78,6 @@ class TrainBatchGenerator:
                             break
                         curr_idx = 0
 
-                # Generate batch only if queue has space
                 batch = self.words_by_size[curr_len][
                     curr_idx : min(
                         len(self.words_by_size[curr_len]), curr_idx + self.batch_size
@@ -90,17 +85,14 @@ class TrainBatchGenerator:
                 ]
                 curr_idx += self.batch_size
 
-                # Process batch
                 data = [gen_x_y_for_word(word) for word in batch]
                 x = torch.stack([d[0] for d in data])
                 mask = torch.stack([d[1] for d in data])
                 y = torch.stack([d[2] for d in data])
 
-                # Put batch in queue (should not block since we checked queue is not full)
                 self.batch_queue.put((x, mask, y), timeout=1.0)
 
             except queue.Full:
-                # Queue became full between check and put, wait a bit
                 time.sleep(0.01)
             except Exception as e:
                 print(f"Error in batch producer: {e}")
@@ -112,8 +104,8 @@ class TrainBatchGenerator:
     def __next__(self):
         """Return next batch from cache"""
         try:
-            batch = self.batch_queue.get(timeout=5.0)  # Wait up to 5 seconds
-            if batch is None:  # End of data signal
+            batch = self.batch_queue.get(timeout=5.0)
+            if batch is None:
                 raise StopIteration
             return batch
         except queue.Empty:
@@ -133,7 +125,7 @@ class TrainBatchGenerator:
         try:
             self.stop()
         except:
-            pass  # Ignore errors during cleanup
+            pass
 
     def __enter__(self):
         """Context manager entry"""

@@ -33,7 +33,6 @@ else:
 
 def test_valid_shapes():
     for x, y in TrainBatchGenerator(batch_size=64, small_data=small_data, surr=surr):
-        # Assert batch dimensions match
         assert x.shape[0] == y.shape[0], (
             f"Batch dimensions don't match: x={x.shape[0]}, y={y.shape[0]}"
         )
@@ -59,7 +58,6 @@ def train(model_path="models/nn2a_nopos.pth", device=None, verbose=False):
     history = History()
     best_val_metric = -1
 
-    # Initialize early stopping
     early_stopping = None
     if use_early_stopping:
         early_stopping = EarlyStopping(
@@ -92,7 +90,6 @@ def train(model_path="models/nn2a_nopos.pth", device=None, verbose=False):
                 history.add_epoch(val_metric=winrate)
                 history.print_metrics()
 
-                # Check early stopping
                 if early_stopping and early_stopping(winrate, model):
                     if verbose:
                         print(f"Early stopping at epoch {epoch + 1}")

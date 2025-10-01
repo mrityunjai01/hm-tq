@@ -9,7 +9,6 @@ from .gen_functions import gen_x_y_for_word
 def test_bert_model():
     """Test the BERT model with a simple example"""
 
-    # Create model
     model = HangmanNet(
         vocab_size=27,
         hidden_dim=256,
@@ -22,16 +21,13 @@ def test_bert_model():
 
     print(f"Model created with {sum(p.numel() for p in model.parameters())} parameters")
 
-    # Test with a sample word
     test_word = "marmalite"
     print(f"Testing with word: '{test_word}'")
 
-    # Generate masked data
     masked_word, original_indices = gen_x_y_for_word(test_word)
     print(f"Masked word shape: {masked_word.shape}")
     print(f"Original indices: {original_indices}")
 
-    # Convert indices back to characters to see masking
     masked_chars = []
     for i in range(masked_word.shape[0]):
         masked_chars.append(chr(masked_word[i] + ord("a")))
@@ -39,20 +35,16 @@ def test_bert_model():
     print(f"Original word: {test_word}")
     print(f"Masked word:   {''.join(masked_chars)}")
 
-    # Test forward pass
     model.eval()
     with torch.no_grad():
-        # Add batch dimension
         x_batch = (
             torch.tensor(masked_word).unsqueeze(0).long()
         )  # (1, seq_len, vocab_size)
         print(f"Input shape: {x_batch.shape}")
 
-        # Forward pass
         output = model(x_batch)
         print(f"Output shape: {output.shape}")
 
-        # Get predictions
         predictions = torch.softmax(output, dim=-1)
         predicted_chars = torch.argmax(predictions, dim=-1)
 
@@ -70,4 +62,3 @@ def test_bert_model():
 
 if __name__ == "__main__":
     test_bert_model()
-

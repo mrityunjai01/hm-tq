@@ -16,7 +16,6 @@ class History:
         """Plot training history and save to files."""
         os.makedirs(self.plot_directory, exist_ok=True)
 
-        # Plot losses
         if self.train_loss or self.val_loss:
             plt.figure(figsize=(10, 6))
             if self.train_loss:
@@ -31,7 +30,6 @@ class History:
             plt.savefig(os.path.join(self.plot_directory, "loss_plot.png"))
             plt.close()
 
-        # Plot validation metric
         if self.val_metric:
             plt.figure(figsize=(10, 6))
             plt.plot(self.val_metric, label="Validation Metric", color="green")

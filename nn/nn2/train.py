@@ -16,7 +16,6 @@ def test_valid_shapes():
             f"Batch dimensions don't match: x={x.shape[0]}, y={y.shape[0]}"
         )
 
-        # Assert feature dimensions are correct
         assert x.shape[1] == 2 * surr, (
             f"x second dimension should be 34, got {x.shape[1]}"
         )

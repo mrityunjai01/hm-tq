@@ -312,7 +312,7 @@ if __name__ == "__main__":
     model.load_state_dict(
         torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
     )
-    model.eval()
+    model = model.eval()
 
     # res = model_single_game(hconfig, model=model, test_word="spissitudj", verbose=True)
     # print(res)
@@ -343,5 +343,6 @@ if __name__ == "__main__":
         hconfig,
         model_object=model,
         small_words_model_object=None,
+        test_words_file="hangman_data/test_words.txt",
         verbose=True,
     )
