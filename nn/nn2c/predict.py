@@ -12,8 +12,9 @@ def predict(
     mult_factor=1.0,
 ) -> list[tuple[float, int]]:
     """I will use model to predict a char from 'a' to 'z' for each '_'"""
+    word = word.replace("_", "{")
 
-    n_known_chars = set([ch for ch in word if ch != "_"])
+    n_known_chars = set([ch for ch in word if ch != "{"])
     if len(n_known_chars) == 0:
         return [(100.0 - i, ord(c) - ord("a")) for i, c in enumerate(char_freq)]
     elif len(n_known_chars) == 1:
@@ -22,23 +23,16 @@ def predict(
             for i, c in enumerate(most_cooccuring_values[next(iter(n_known_chars))])
         ]
 
-    blank_positions = [i for i, char in enumerate(word) if char == "_"]
+    blank_positions = [i for i, char in enumerate(word) if char == "{"]
     if not blank_positions:
         raise ValueError("No blanks in the word to predict.")
 
     char_indices = []
     for char in word:
-        if char == "_":
-            char_indices.append(26)  # '_' as unknown
-        else:
-            char_indices.append(ord(char) - ord("a"))
+        char_indices.append(ord(char) - ord("a"))
     x = torch.tensor(char_indices, dtype=torch.int32)
     predictions = model.predict_numpy(x).squeeze()
-    # at_least_one_pred = predictions[blank_positions].max(axis=0) * mult_factor
-    at_least_one_pred = (
-        np.power((1 - (1 - predictions[blank_positions]).prod(axis=0)), 4) * mult_factor
-    )
-    # at_least_one_pred = predictions[blank_positions].mean(axis=0)
+    at_least_one_pred = 1 - (1 - predictions[blank_positions]).prod(axis=0)
     return [(v, i) for i, v in enumerate(at_least_one_pred.tolist())]
 
 

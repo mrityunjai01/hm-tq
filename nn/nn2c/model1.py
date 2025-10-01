@@ -26,7 +26,7 @@ class MultiHeadAttentionWithRoPE(nn.Module):
         )
 
         self.rope = RotaryPositionalEmbeddings(
-            dim=self.d_k, max_seq_len=max_seq_len, base=50
+            dim=self.d_k, max_seq_len=max_seq_len, base=100
         )
 
     def forward(self, x, mask=None):
@@ -42,7 +42,6 @@ class MultiHeadAttentionWithRoPE(nn.Module):
                 (seq_len, seq_len), device=x.device, dtype=torch.float32
             )
             diagonal_mask = diagonal_mask.masked_fill(eye_matrix, float("-inf"))
-            # breakpoint()
         else:
             diagonal_mask = mask
 
@@ -78,6 +77,7 @@ class TransformerEncoderLayerWithRoPE(nn.Module):
         d_model,
         num_heads,
         dim_feedforward,
+        layer_norm_eps,
         dropout=0.1,
     ):
         super().__init__()
@@ -91,8 +91,8 @@ class TransformerEncoderLayerWithRoPE(nn.Module):
         self.linear2 = nn.Linear(dim_feedforward, d_model)
 
         # Pre-norm (norm_first=True)
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
+        self.norm1 = nn.LayerNorm(d_model, eps=layer_norm_eps)
+        self.norm2 = nn.LayerNorm(d_model, eps=layer_norm_eps)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
 
@@ -125,6 +125,7 @@ class HangmanNet(nn.Module):
         num_heads=8,
         num_layers=4,
         dropout_rate=0.3,
+        layer_norm_eps=5e-5,
         device="cpu",
     ):
         super(HangmanNet, self).__init__()
@@ -141,6 +142,7 @@ class HangmanNet(nn.Module):
                     d_model=hidden_dim,
                     num_heads=num_heads,
                     dim_feedforward=hidden_dim * 4,
+                    layer_norm_eps=layer_norm_eps,
                     dropout=dropout_rate,
                 )
                 for _ in range(num_layers)

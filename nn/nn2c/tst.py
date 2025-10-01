@@ -104,7 +104,6 @@ def test_model_on_game_play(
 
 
 def model_single_game(
-    model_filepath: str = "models/cb.pth",
     model=None,
     test_word: str = "hangman",
     verbose=False,

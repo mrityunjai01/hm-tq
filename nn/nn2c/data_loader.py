@@ -23,7 +23,7 @@ class TrainBatchGenerator:
         with open(words_file, "r") as f:
             words = [line.strip() for line in f.readlines()]
             if small_data:
-                words = words[:2000]
+                words = words[:20000]
             self.words_by_size = {}
             for word in words:
                 if len(word) not in self.words_by_size:
@@ -40,7 +40,9 @@ class TrainBatchGenerator:
         # Threading setup
         self.batch_queue = queue.Queue(maxsize=cache_size)
         self.stop_event = threading.Event()
-        self.producer_thread = threading.Thread(target=self._batch_producer, daemon=True)
+        self.producer_thread = threading.Thread(
+            target=self._batch_producer, daemon=True
+        )
         self.finished = False
 
         # Start the producer thread

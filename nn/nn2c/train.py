@@ -1,4 +1,5 @@
 import torch
+import math
 import tqdm
 from torch import nn, optim
 from stage import STAGE, GPU
@@ -7,7 +8,7 @@ from torch.amp.grad_scaler import GradScaler
 
 from .data_loader import TrainBatchGenerator
 from .history import History
-from .model1 import HangmanNet, count_parameters
+from nn.nn2b.model1 import HangmanNet, count_parameters
 from .tst import test_model_on_game_play
 from .early_stopping import EarlyStopping
 
@@ -15,14 +16,14 @@ from .early_stopping import EarlyStopping
 surr = 4
 if STAGE:
     small_data = True
-    num_epochs = 4
+    num_epochs = 200
     val_epoch_interval = 1
     initial_lr = 1e-3
     pos_weight_coeff = 10
     scheduler_tmax = 10
-    early_stopping_patience = 5
+    early_stopping_patience = 500
     use_early_stopping = True
-    test_word_count = 30
+    test_word_count = 100
 else:
     small_data = False
     num_epochs = 80
@@ -34,27 +35,15 @@ else:
     test_word_count = 4000
 
 
-def test_valid_shapes():
-    for x, _, y in TrainBatchGenerator(
-        batch_size=1024,
-        small_data=small_data,
-        words_file="hangman_data/train_words.txt",
-    ):
-        assert x.shape[0] == y.shape[0], (
-            f"Batch dimensions don't match: x={x.shape[0]}, y={y.shape[0]}"
-        )
-
-        print(f"✓ Shapes are valid: x={x.shape}, y={y.shape}")
-        break
-
-
 def train(model_path="models/nn2c.pth", device=None, verbose=False):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     model = HangmanNet(vocab_size=27, device=device, num_layers=4).to(device)
+
     if GPU:
         model = torch.compile(model, mode="max-autotune")
         scaler = GradScaler()
+
     print(f"{count_parameters(model)} params")
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer = optim.AdamW(model.parameters(), lr=initial_lr, eps=5e-5)
@@ -79,6 +68,7 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False):
         ):
             optimizer.zero_grad()
             x, mask, y = x.to(device), mask.to(device), y.to(device)
+
             if GPU:
                 with autocast(device_type=device):
                     outputs = model(x)
@@ -87,12 +77,13 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False):
             else:
                 outputs = model(x)
                 loss = criterion(outputs[mask], y[mask])
+                if math.isnan(loss.item()):
+                    breakpoint()
                 loss.backward()
 
             if GPU:
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
                 scaler.step(optimizer)
                 scaler.update()
             else:
@@ -131,5 +122,4 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False):
 
 
 if __name__ == "__main__":
-    test_valid_shapes()
     train(verbose=True)
