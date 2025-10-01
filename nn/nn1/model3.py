@@ -33,19 +33,7 @@ class HangmanNet(nn.Module):
         self.bn1 = nn.BatchNorm1d(hidden_dim1 * input_dim)
         self.dropout1 = nn.Dropout(dropout_rate)
 
-        self.layer2 = nn.Linear(hidden_dim1 * input_dim, hidden_dim2)
-        self.bn2 = nn.BatchNorm1d(hidden_dim2)
-        self.dropout2 = nn.Dropout(dropout_rate)
-
-        self.layer3 = nn.Linear(hidden_dim2, hidden_dim2)
-        self.bn3 = nn.BatchNorm1d(hidden_dim2)
-        self.dropout3 = nn.Dropout(dropout_rate)
-
-        self.layer4 = nn.Linear(hidden_dim2, hidden_dim2)
-        self.bn4 = nn.BatchNorm1d(hidden_dim2)
-        self.dropout4 = nn.Dropout(dropout_rate)
-
-        self.layer5 = nn.Linear(hidden_dim2, 26)  # Output 26 letters
+        self.layer3 = nn.Linear(hidden_dim1 * input_dim, 26)  # Output 26 letters
         self._init_weights()
 
         self.device = device
@@ -75,26 +63,7 @@ class HangmanNet(nn.Module):
         x = F.relu(x)
         x = self.dropout1(x)
 
-        # Layer 2
-        x = self.layer2(x)
-        x = self.bn2(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-
-        rec = self.layer3(x)
-        rec = F.relu(rec)
-        rec = self.bn3(rec)
-        rec = self.dropout3(rec)
-
-        x = x + rec
-
-        rec = self.layer4(x)
-        rec = self.bn4(rec)
-        rec = F.relu(rec)
-        rec = self.dropout4(rec)
-
-        x = x + rec
-        x = self.layer5(x)
+        x = self.layer3(x)
         return x
 
     def predict_numpy(self, x):

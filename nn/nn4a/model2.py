@@ -29,11 +29,14 @@ class HangmanNet(nn.Module):
             embed_dimension = vocab_size
 
         self.embed_layer = nn.Embedding(vocab_size, embed_dimension)
+        self.pos_embed_layer = nn.Embedding(
+            8, embed_dimension
+        )  # 8 position classes (0-7)
         self.layer1 = nn.Linear(embed_dimension, hidden_dim1)
-        self.bn1 = nn.BatchNorm1d(hidden_dim1 * input_dim)
+        self.bn1 = nn.BatchNorm1d(hidden_dim1 * (input_dim + 1))
         self.dropout1 = nn.Dropout(dropout_rate)
 
-        self.layer2 = nn.Linear(hidden_dim1 * input_dim, hidden_dim2)
+        self.layer2 = nn.Linear(hidden_dim1 * (input_dim + 1), hidden_dim2)
         self.bn2 = nn.BatchNorm1d(hidden_dim2)
         self.dropout2 = nn.Dropout(dropout_rate)
 
@@ -58,18 +61,40 @@ class HangmanNet(nn.Module):
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
+    def reset_last_embedding(self):
+        """ensure the last embedding is always the same"""
+        mask = torch.ones(
+            (self.embed_layer.weight.shape[0], self.embed_layer.weight.shape[0])
+        )
+        mask[:, -1] = 0
+        mask /= mask.sum(dim=1, keepdim=True)
+        self.embed_layer.weight.data = torch.matmul(mask, self.embed_layer.weight)
+
     def forward(self, x):
         """
         Forward pass.
 
         Args:
-            x: Input tensor of shape (batch_size, 34, vocab_size)
+            x: Tuple of (surroundings_tensor, positions_tensor)
+               surroundings_tensor: shape (batch_size, 34)
+               positions_tensor: shape (batch_size,)
 
         Returns:
             Output tensor of shape (batch_size, 26) with sigmoid activation
         """
-        x = self.embed_layer(x)
-        x = self.layer1(x)
+        surroundings, positions = x
+
+        # Get embeddings for surroundings and positions
+        surr_embed = self.embed_layer(surroundings)  # (batch_size, 34, embed_dim)
+        pos_embed = self.pos_embed_layer(positions)  # (batch_size, embed_dim)
+
+        # Concatenate positional embedding to surroundings
+        pos_embed_expanded = pos_embed.unsqueeze(1)  # (batch_size, 1, embed_dim)
+        combined_embed = torch.cat(
+            [surr_embed, pos_embed_expanded], dim=1
+        )  # (batch_size, 35, embed_dim)
+
+        x = self.layer1(combined_embed)
         x = x.view(x.size(0), -1)  # Flatten for batch norm
         x = self.bn1(x)
         x = F.relu(x)
@@ -99,8 +124,11 @@ class HangmanNet(nn.Module):
 
     def predict_numpy(self, x):
         with torch.no_grad():
-            x = torch.tensor(x).to(self.device).view(1, -1)
-            return F.sigmoid(self(x)).cpu().detach().numpy()
+            surroundings, positions = x
+            surroundings_tensor = torch.tensor(surroundings).to(self.device)
+            positions_tensor = torch.tensor(positions).to(self.device)
+            x_tuple = (surroundings_tensor, positions_tensor)
+            return F.softmax(self(x_tuple), dim=1).cpu().detach().numpy()
 
 
 def create_model(vocab_size=27, hidden_dim1=512, hidden_dim2=256, dropout_rate=0.3):

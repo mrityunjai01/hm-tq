@@ -88,7 +88,9 @@ def sort_key(ch: str) -> int:
     return char_freq.index(ch) if ch in char_freq else 26
 
 
-def gen_x_y_for_word(word: str) -> tuple[NDArray[np.int32], NDArray[np.int32]]:
+def gen_x_y_for_word(
+    word: str, surr: int
+) -> tuple[NDArray[np.int32], NDArray[np.int32]]:
     """
     returns a (combinations - 1) X 7 array, and a
     (combinations - 1) X 26 array of labels
@@ -99,47 +101,52 @@ def gen_x_y_for_word(word: str) -> tuple[NDArray[np.int32], NDArray[np.int32]]:
     sorted_chars = sorted(list(set_chars), key=sort_key)
 
     for combination in create_combinations(sorted_chars):
-        x_row = [26 for _ in range(34)]
-        y_row = [0 for _ in range(26)]
-        for i in range(min(len(word), 17)):
-            if word[i] in combination:
-                x_row[i] = ord(word[i]) - ord("a")
-            else:
-                x_row[i] = 27
+        for ch in set_chars:
+            if ch not in combination:
+                newly_created_word = word.replace(ch, "|")
 
-            if word[-1 - i] in combination:
-                x_row[33 - i] = ord(word[-1 - i]) - ord("a")
-            else:
-                x_row[33 - i] = 27
+                newly_created_word = (
+                    "".join(["{" for _ in range(surr)])
+                    + word
+                    + "".join(["{" for _ in range(surr)])
+                )
 
-        unrevealed_chars = set_chars.difference(set(combination))
-        for ch in unrevealed_chars:
-            y_row[ord(ch) - ord("a")] = 1
+                for i in range(surr, len(newly_created_word) - surr):
+                    x_row = [
+                        ord(w) - ord("a")
+                        for w in (
+                            newly_created_word[i - surr : i]
+                            + newly_created_word[i + 1 : i + surr + 1]
+                        )
+                    ]
+                    y_row = [ord(word[i - surr]) - ord("a")]
 
-        x.append(x_row)
-        y.append(y_row)
+                    x.append(x_row)
+                    y.append(y_row)
     return np.array(x, dtype=np.int32), np.array(y, dtype=np.int32)
 
 
-def gen_x(word: str) -> NDArray[np.int32]:
+def gen_x(word: str, surr: int) -> NDArray[np.int32]:
     """
-    returns a 1 X 34 array
+    returns a underscores X 34 array
     """
 
-    x_row = [26 for _ in range(34)]
-    for i in range(min(len(word), 17)):
-        if word[i] != "_":
-            x_row[i] = ord(word[i]) - ord("a")
-        else:
-            x_row[i] = 27
+    x: list[list[int]] = []
+    word = (
+        "".join(["{" for _ in range(surr)]) + word + "".join(["{" for _ in range(surr)])
+    )
+    word = word.replace("_", "|")
 
-        if word[-1 - i] != "_":
-            x_row[33 - i] = ord(word[-1 - i]) - ord("a")
-        else:
-            x_row[33 - i] = 27
-    return np.array(x_row, dtype=np.int32).reshape(1, -1)
+    for i in range(surr, len(word) - surr):
+        if word[i] == "|":
+            x_row = [
+                ord(w) - ord("a")
+                for w in (word[i - surr : i] + word[i + 1 : i + surr + 1])
+            ]
+            x.append(x_row)
+    return np.array(x, dtype=np.int32)
 
 
 if __name__ == "__main__":
-    result = gen_x_y_for_word("catez")
+    result = gen_x_y_for_word("catez", 3)
     print(result)
