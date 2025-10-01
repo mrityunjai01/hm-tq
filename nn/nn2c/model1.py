@@ -26,7 +26,7 @@ class MultiHeadAttentionWithRoPE(nn.Module):
         )
 
         self.rope = RotaryPositionalEmbeddings(
-            dim=self.d_k, max_seq_len=max_seq_len, base=100
+            dim=self.d_k, max_seq_len=max_seq_len, base=50
         )
 
     def forward(self, x, mask=None):

@@ -37,8 +37,15 @@ else:
     test_word_count = 4000
 
 
-def train(model_path="models/nn2c.pth", device=None, verbose=False,
-          batch_size=None, scheduler_type="cosine", num_layers=4, hidden_dim=512):
+def train(
+    model_path="models/nn2c.pth",
+    device=None,
+    verbose=False,
+    batch_size=None,
+    scheduler_type="cosine",
+    num_layers=4,
+    hidden_dim=512,
+):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -46,7 +53,9 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False,
     if batch_size is None:
         batch_size = 64 if STAGE else 64
 
-    model = HangmanNet(vocab_size=27, device=device, num_layers=num_layers, hidden_dim=hidden_dim).to(device)
+    model = HangmanNet(
+        vocab_size=27, device=device, num_layers=num_layers, hidden_dim=hidden_dim
+    ).to(device)
 
     if GPU:
         model = torch.compile(model, mode="max-autotune")
@@ -64,7 +73,9 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False,
     elif scheduler_type == "exponential":
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
     elif scheduler_type == "plateau":
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=5, factor=0.7)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="max", patience=5, factor=0.7
+        )
     else:
         raise ValueError(f"Unknown scheduler type: {scheduler_type}")
     history = History()
@@ -128,8 +139,8 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False,
                 history.print_metrics()
 
                 # Step plateau scheduler with validation metric
-                if scheduler_type == "plateau":
-                    scheduler.step(winrate)
+                # if scheduler_type == "plateau":
+                #     scheduler.step(winrate)
 
                 # Check early stopping
                 if early_stopping and early_stopping(winrate, model):
@@ -145,19 +156,38 @@ def train(model_path="models/nn2c.pth", device=None, verbose=False,
 
 def main():
     parser = argparse.ArgumentParser(description="Train HangmanNet model")
-    parser.add_argument("--batch-size", type=int, default=None,
-                        help="Batch size for training (default: 64)")
-    parser.add_argument("--scheduler", type=str, default="cosine",
-                        choices=["cosine", "step", "exponential", "plateau"],
-                        help="Learning rate scheduler type (default: cosine)")
-    parser.add_argument("--num-layers", type=int, default=4,
-                        help="Number of transformer layers (default: 4)")
-    parser.add_argument("--hidden-dim", type=int, default=512,
-                        help="Hidden dimension size (default: 512)")
-    parser.add_argument("--model-path", type=str, default="models/nn2c.pth",
-                        help="Path to save model (default: models/nn2c.pth)")
-    parser.add_argument("--verbose", action="store_true",
-                        help="Enable verbose output")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Batch size for training (default: 64)",
+    )
+    parser.add_argument(
+        "--scheduler",
+        type=str,
+        default="cosine",
+        choices=["cosine", "step", "exponential", "plateau"],
+        help="Learning rate scheduler type (default: cosine)",
+    )
+    parser.add_argument(
+        "--num-layers",
+        type=int,
+        default=4,
+        help="Number of transformer layers (default: 4)",
+    )
+    parser.add_argument(
+        "--hidden-dim",
+        type=int,
+        default=512,
+        help="Hidden dimension size (default: 512)",
+    )
+    parser.add_argument(
+        "--model-path",
+        type=str,
+        default="models/nn2c.pth",
+        help="Path to save model (default: models/nn2c.pth)",
+    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
     args = parser.parse_args()
 
@@ -167,7 +197,7 @@ def main():
         batch_size=args.batch_size,
         scheduler_type=args.scheduler,
         num_layers=args.num_layers,
-        hidden_dim=args.hidden_dim
+        hidden_dim=args.hidden_dim,
     )
 
 
