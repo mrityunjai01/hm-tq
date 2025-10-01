@@ -1,87 +1,37 @@
-from numpy.typing import NDArray
-from .gen_functions import unknown_row, onehot
 import numpy as np
+import torch
 
-initial_eq_sweeps = 2
-eq_k = 3
-initial_sweeps = 2
-target_vocab_size = 27  # a-z
-
-
-def spot_predict(
-    encoded_word: NDArray,
-    model,
-    pos: int,
-    surr: int,
-    already_guessed: set[int],
-    eq_sweeps=True,
-):
-    surrounding = np.concatenate(
-        [encoded_word[pos - surr : pos], encoded_word[pos + 1 : pos + surr + 1]],
-        axis=0,
-    )
-
-    original_word_len = encoded_word.shape[0] - 2 * surr
-
-    position_fraction = (pos - surr) / original_word_len
-    position_encoding = min(7, int(position_fraction * 8))
-
-    x_surrounding = np.expand_dims(surrounding, axis=0)  # Add batch dimension
-    x_position = np.array([position_encoding], dtype=np.int32)
-
-    predictions = model.predict_numpy(
-        x_surrounding,
-        x_position,
-    ).flatten()
-    predictions = np.append(predictions, 0)
-    assert predictions.shape[0] == target_vocab_size
-    for idx in already_guessed:
-        predictions[idx] = 0.0  # Zero out already guessed characters
-    if eq_sweeps:
-        # set top 3 to equal probability
-        top_k_indices = np.argsort(predictions)[-eq_k:]
-        predictions[top_k_indices] = np.max(predictions)
-
-    predictions /= predictions.sum()  # Re-normalize to sum to 1
-
-    encoded_word[pos] = predictions
+from .base_model import char_freq, most_cooccuring_values
 
 
 def predict(
     word: str,
     model,
-    surr: int,
-    already_guessed: set[int],
-    k: int = 3,
 ) -> list[int]:
     """I will use model to predict a char from 'a' to 'z' for each '_'"""
-    original_word_len = len(word)
 
-    padded_word = "{" * surr + word + "{" * surr
-    blank_positions = [i for i, char in enumerate(padded_word) if char == "_"]
+    n_known_chars = set([ch for ch in word if ch != "_"])
+    if len(n_known_chars) == 0:
+        return [ord(c) - ord("a") for c in char_freq]
+    elif len(n_known_chars) == 1:
+        return [
+            ord(c) - ord("a") for c in most_cooccuring_values[next(iter(n_known_chars))]
+        ]
+
+    blank_positions = [i for i, char in enumerate(word) if char == "_"]
     if not blank_positions:
         raise ValueError("No blanks in the word to predict.")
 
     char_indices = []
-    for char in padded_word:
+    for char in word:
         if char == "_":
-            char_indices.append(27)  # '_' as unknown
+            char_indices.append(26)  # '_' as unknown
         else:
             char_indices.append(ord(char) - ord("a"))
+    x = torch.tensor(char_indices, dtype=torch.int32)
+    predictions = model.predict_numpy(x).squeeze()
 
-    encoded_word = onehot(char_indices)
-
-    for _ in range(initial_eq_sweeps):
-        for pos in blank_positions:
-            spot_predict(
-                encoded_word, model, pos, surr, already_guessed, eq_sweeps=True
-            )
-    for _ in range(initial_sweeps):
-        for pos in blank_positions:
-            spot_predict(
-                encoded_word, model, pos, surr, already_guessed, eq_sweeps=False
-            )
-    at_least_one_pred = 1 - (1 - encoded_word[blank_positions]).prod(axis=0)
+    at_least_one_pred = predictions[blank_positions].max(axis=0)
     return np.argsort(at_least_one_pred).tolist()[::-1]
 
 
@@ -112,7 +62,7 @@ def beam_search_predict(word, model, surr, k):
                 else:
                     char_indices.append(ord(char) - ord("a"))
 
-            x_surrounding = onehot(char_indices)
+            x_surrounding = char_indices
 
             position_fraction = (pos - surr) / original_word_len
             position_encoding = min(7, int(position_fraction * 8))
