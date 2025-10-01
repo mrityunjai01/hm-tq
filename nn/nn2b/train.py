@@ -45,13 +45,13 @@ def test_valid_shapes():
 def train(model_path="models/nn2b.pth", device=None, verbose=False):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = HangmanNet(vocab_size=27, device=device, num_layers=2).to(device)
+    model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
     if GPU:
         model = torch.compile(model, mode="max-autotune")
         scaler = GradScaler()
     print(f"{count_parameters(model)} params")
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = optim.Adam(model.parameters(), lr=initial_lr)
+    optimizer = optim.AdamW(model.parameters(), lr=initial_lr, eps=5e-5)
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer,
         5,
@@ -98,7 +98,9 @@ def train(model_path="models/nn2b.pth", device=None, verbose=False):
         if epoch % val_epoch_interval == 0:
             model.eval()
             with torch.no_grad():
-                winrate = test_model_on_game_play(model_object=model, surr=surr)
+                winrate = test_model_on_game_play(
+                    model_object=model,
+                )
                 if winrate > best_val_metric:
                     best_val_metric = winrate
                     torch.save(model.state_dict(), f"{model_path}_checkpoint_{epoch}")

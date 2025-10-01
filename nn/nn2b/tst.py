@@ -47,7 +47,6 @@ def reset_guesser_state(guess_fn):
 
 def test_model_on_game_play(
     model_object=None,
-    surr: int = 3,
     test_words_file: str = "w_test.txt",
     max_test_words: int | None = None,
     verbose=False,
@@ -86,7 +85,9 @@ def test_model_on_game_play(
 
     for i, word in enumerate(test_words):
         result = model_single_game(
-            test_word=word, model=model, verbose=False, surr=surr
+            test_word=word,
+            model=model,
+            verbose=False,
         )
         model_results.append(result)
         if verbose:
@@ -102,7 +103,6 @@ def model_single_game(
     model=None,
     test_word: str = "hangman",
     verbose=False,
-    surr: int = 3,
 ) -> int:
     """
     Play a single game using the trained model.
@@ -110,16 +110,13 @@ def model_single_game(
         model_filepath: Path to the saved model
         test_word: The word to guess in the game
     """
-    if model is None:
-        if not os.path.exists(model_filepath):
-            print(f"Model not found at {model_filepath}. Please train first.")
-            raise FileNotFoundError(f"Model not found at {model_filepath}")
-
-        model = load(model_filepath, trusted=["catboost.core.CatBoostClassifier"])
 
     assert model is not None
 
-    model_guesser = create_model_guesser(model, verbose=verbose, surr=surr)
+    model_guesser = create_model_guesser(
+        model,
+        verbose=verbose,
+    )
     reset_guesser_state(model_guesser)
     model_result = play_game(test_word, model_guesser, verbose=verbose)
     return model_result
