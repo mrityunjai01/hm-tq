@@ -1,6 +1,8 @@
 import regex as re
 import numpy as np
 
+from nn.nn2b.hconfig import HConfig
+
 
 def load_word_dictionary():
     with open("w_train.txt", "r") as f:
@@ -10,11 +12,13 @@ def load_word_dictionary():
 word_dictionary = load_word_dictionary()
 
 
-def scrap_g(word):
-    if (word.count("_") >= len(word) - 5) and (word.count("_") >= 3):
+def scrap_g(word, hconfig: HConfig):
+    if (word.count("_") >= len(word) - (hconfig.min_non_blanks - 1)) or (
+        word.count("_") >= hconfig.max_blanks + 1
+    ):
         return []
 
-    spans = [6, 7]
+    spans = [hconfig.span_start, hconfig.span_start + 1]
     blank_positions = [i for i in range(len(word)) if word[i] == "_"]
 
     word_len = len(word)
@@ -37,7 +41,7 @@ def scrap_g(word):
                             breakpoint()
                         occurences[letter_idx] += 1
                         n_total_occ += 1
-    if n_total_occ < 2:
+    if n_total_occ < hconfig.min_total_occ:
         return []
     occurences = occurences.astype(np.float32)
     occurences /= n_total_occ

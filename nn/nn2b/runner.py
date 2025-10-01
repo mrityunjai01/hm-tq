@@ -5,7 +5,9 @@ import numpy as np
 import torch
 
 from game.play_game import play_game
+from nn.nn2b.hconfig import HConfig
 from nn.nn2b.selector import SelectorNN, append_to_file
+from nn.nn2b.validate import validate_predictions
 from .scrap import scrap_g
 from tqdm import tqdm
 
@@ -46,7 +48,12 @@ def load_pass_words():
         pass_words = pickle.load(f)
 
 
-def create_model_guesser(model, verbose=False, surr: int = 3):
+def create_model_guesser(
+    model,
+    hconfig: HConfig,
+    verbose=False,
+    surr: int = 3,
+):
     """
     Create a guess function that uses the trained model to predict letters.
 
@@ -76,11 +83,20 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
                 model,
                 # already_guessed=guess_fn.already_guessed,
                 verbose=verbose,
-                mult_factor=1.5,
             )
-            scrap_output = scrap_g(current_word)
+            predict_output = [
+                (0, c) if c in guess_fn.already_guessed else (p, c)
+                for (p, c) in predict_output
+            ]
+            scrap_output = scrap_g(current_word, hconfig)
+            scrap_output = [
+                (0, c) if c in guess_fn.already_guessed else (p, c)
+                for (p, c) in scrap_output
+            ]
+
             predict_map = {v: k for k, v in predict_output}
             scrap_map = {v: k for k, v in scrap_output}
+
             selector_output = []
 
             if len(scrap_output) > 0:
@@ -114,7 +130,10 @@ def create_model_guesser(model, verbose=False, surr: int = 3):
                     )
                     targets = [v[1] for v in (predict_output[:3] + scrap_output[:3])]
                     selector_output = [
-                        v[1] for v in selector_model(x.unsqueeze(0), targets)[:4]
+                        v[1]
+                        for v in selector_model(x.unsqueeze(0), targets)[
+                            : hconfig.selector_prefix_len
+                        ]
                     ]
 
             # scrap_output = []
@@ -140,6 +159,7 @@ def reset_guesser_state(guess_fn):
 
 
 def test_model_on_game_play(
+    hconfig: HConfig,
     model_object=None,
     test_words_file: str = "w_test.txt",
     max_test_words: int | None = None,
@@ -176,6 +196,7 @@ def test_model_on_game_play(
 
     for i, word in tqdm(enumerate(test_words)):
         result = model_single_game(
+            hconfig,
             test_word=word,
             model=model,
             verbose=False,
@@ -195,6 +216,7 @@ def test_model_on_game_play(
 
 
 def model_single_game(
+    hconfig: HConfig,
     model_filepath: str = "models/cb.pth",
     model=None,
     test_word: str = "hangman",
@@ -212,6 +234,7 @@ def model_single_game(
 
     model_guesser = create_model_guesser(
         model,
+        hconfig,
         verbose=verbose,
     )
     reset_guesser_state(model_guesser)
@@ -243,9 +266,15 @@ if __name__ == "__main__":
     device = "cpu"
     model = HangmanNet(vocab_size=27, device=device, num_layers=3).to(device)
     model = torch.compile(model, mode="max-autotune")
+    hconfig = HConfig(
+        selector_prefix_len=1, min_non_blanks=7, max_blanks=3, span_start=6
+    )
 
-    model_filepath = "models/nn2b.pth_checkpoint_58"
+    model_filepath = "models/nn2b.pth_checkpoint_2"
     model.load_state_dict(
         torch.load(model_filepath, weights_only=True, map_location=torch.device(device))
     )
-    test_model_on_game_play(model_object=model, verbose=True)
+    # res = model_single_game(hconfig, model=model, test_word="internship", verbose=True)
+    # print(res)
+
+    test_model_on_game_play(HConfig(), model_object=model, verbose=True)
