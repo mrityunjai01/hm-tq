@@ -11,31 +11,32 @@ word_dictionary = load_word_dictionary()
 
 
 def scrap_g(word):
-    if (word.count("_") >= len(word) - 6) and (word.count("_") >= 2):
+    if (word.count("_") >= len(word) - 5) and (word.count("_") >= 3):
         return []
 
-    span = 6
+    spans = [6, 7]
     blank_positions = [i for i in range(len(word)) if word[i] == "_"]
 
     word_len = len(word)
     n_total_occ = 0
     occurences = np.zeros(26, dtype=np.int32)
-    for pos in blank_positions:
-        if word_len < span:
-            break
-        for start in range(word_len - span + 1):
-            end = start + span
-            if start <= pos < end:
-                pattern = word[start:end]
-                pattern = pattern.replace("_", "[a-z]")
+    for span in spans:
+        for pos in blank_positions:
+            if word_len < span:
+                break
+            for start in range(word_len - span + 1):
+                end = start + span
+                if start <= pos < end:
+                    pattern = word[start:end]
+                    pattern = pattern.replace("_", "[a-z]")
 
-                for match in re.finditer(pattern, word_dictionary):
-                    letter = word_dictionary[match.start() + pos - start]
-                    letter_idx = ord(letter) - ord("a")
-                    if letter_idx < 0:
-                        breakpoint()
-                    occurences[letter_idx] += 1
-                    n_total_occ += 1
+                    for match in re.finditer(pattern, word_dictionary):
+                        letter = word_dictionary[match.start() + pos - start]
+                        letter_idx = ord(letter) - ord("a")
+                        if letter_idx < 0:
+                            breakpoint()
+                        occurences[letter_idx] += 1
+                        n_total_occ += 1
     if n_total_occ < 2:
         return []
     occurences = occurences.astype(np.float32)
