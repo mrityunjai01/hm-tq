@@ -36,7 +36,9 @@ else:
 
 def test_valid_shapes():
     for x, _, y in TrainBatchGenerator(
-        batch_size=64, small_data=small_data, words_file="hangman_data/train_words.txt"
+        batch_size=1024,
+        small_data=small_data,
+        words_file="hangman_data/train_words.txt",
     ):
         assert x.shape[0] == y.shape[0], (
             f"Batch dimensions don't match: x={x.shape[0]}, y={y.shape[0]}"
