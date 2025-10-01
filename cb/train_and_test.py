@@ -19,8 +19,8 @@ from stage import STAGE, GPU
 def main():
     """A single train and test"""
 
-    iterations = 2 if STAGE else 100
-    learning_rate = 0.1
+    iterations = 2 if STAGE else 300
+    learning_rate = 0.04
     depth = 2 if STAGE else 5
 
     cb_final = MultiOutputClassifier(
