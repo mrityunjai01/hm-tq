@@ -3,7 +3,4 @@ cd hm-tq
 python -m pip install skops pandas pyarrow matplotlib
 
 mkdir -p models
-
-./nn/nn2/setup_models.sh > nn2_logs 2>&1 &
-./nn/nn4a/setup_models.sh > nn4a_logs 2>&1 &
-./nn/nn4b/setup_models.sh > nn4b_logs 2>&1 &
+python -m nn.nn2a.train
