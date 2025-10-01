@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .base_model import BaseHangmanModel
+from nn.nn2.base_model import BaseHangmanModel
 
 
 class HangmanNet(BaseHangmanModel):
