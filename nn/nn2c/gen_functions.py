@@ -15,39 +15,26 @@ def gen_x_y_for_word(
     """
     import random
 
+    # Get unique characters in word
     unique_chars = list(set(word))
 
     sorted_chars = sorted(unique_chars, key=sort_key)
 
+    # Randomly select at most 3 character types to mask
     max_num_to_mask = min(6, random.randint(1, len(unique_chars)))
     exp_num_to_mask = min(3, random.randint(1, len(unique_chars)))
     chars_to_mask = []
     last_idx = len(sorted_chars) - 1
-    second_p = 0.8
-    p = exp_num_to_mask / len(sorted_chars) / second_p
+    p = 2 * exp_num_to_mask / len(sorted_chars)
     while len(chars_to_mask) < max_num_to_mask and last_idx >= 0:
-        chars_to_mask.append(sorted_chars[last_idx])
-        last_idx -= 1
         if random.random() < p:
-            break
-    actual_chars_to_mask = []
-    for char in chars_to_mask:
-        if random.random() < second_p:
-            actual_chars_to_mask.append(char)
+            chars_to_mask.append(sorted_chars[last_idx])
+        last_idx -= 1
 
-    # print(f"chars_to_mask = {chars_to_mask}")
-    # print(f"actual_chars_to_mask = {actual_chars_to_mask}")
-
-    if len(actual_chars_to_mask) >= len(unique_chars) - 1:
-        actual_chars_to_mask = actual_chars_to_mask[
-            : -(max(0, len(actual_chars_to_mask) - (len(unique_chars) - 2)))
-        ]
-
-    if len(actual_chars_to_mask) == 0:
-        actual_chars_to_mask.append(sorted_chars[-1])
-
+    if len(chars_to_mask) == 0:
+        chars_to_mask.append(sorted_chars[-1])
     masked_word = word
-    for char in actual_chars_to_mask:
+    for char in chars_to_mask:
         masked_word = masked_word.replace(char, "{")
 
     masked_chars = [ord(c) - ord("a") for c in masked_word]
