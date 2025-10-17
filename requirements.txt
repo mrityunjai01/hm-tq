@@ -1,0 +1,9 @@
+optuna==4.2.0
+torch==2.8.0
+tqdm==4.66.4
+torchao==0.13.0
+torchaudio==2.3.0
+torchdata==0.11.0
+torchtune==0.6.1
+torchvision==0.18.0
+pandas
