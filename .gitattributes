@@ -1,0 +1,2 @@
+models/nn2c.pth_checkpoint_67 filter=lfs diff=lfs merge=lfs -text
+models/nn2c.pth_checkpoint_75 filter=lfs diff=lfs merge=lfs -text
